@@ -15,6 +15,7 @@ function getDb() {
   return new Database(url);
 }
 
+
 async function runReadOnly(sql, params = []) {
   const db = getDb();
   try {
@@ -25,6 +26,7 @@ async function runReadOnly(sql, params = []) {
   }
 }
 
+//blocks INSERT, UPDATE, DELETE, DROP
 function assertReadOnly(sql) {
   const normalized = sql.trim().toUpperCase();
   const forbidden = ["INSERT", "UPDATE", "DELETE", "DROP", "CREATE", "ALTER", "TRUNCATE"];

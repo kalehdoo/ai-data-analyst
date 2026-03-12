@@ -1,16 +1,19 @@
 "use client";
 import { useState } from "react";
 import * as mcp from "@/lib/mcpClient";
+import ClaudeResponse from "./ClaudeResponse";
+import GeminiResponse from "./GeminiResponse";
+import OpenAIResponse from "./OpenAIResponse";
 
 type PromptId = "explore_table" | "funnel_analysis" | "cohort_analysis" | "anomaly_detection" | "join_analysis" | "executive_summary";
 
 const PROMPTS: { id: PromptId; icon: string; label: string; desc: string; color: string }[] = [
-  { id: "explore_table",      icon: "⬡", label: "Explore Table",       desc: "Full EDA: schema, samples, stats, quality", color: "var(--accent)" },
-  { id: "funnel_analysis",    icon: "◃", label: "Funnel Analysis",     desc: "Conversion funnel with drop-off rates",       color: "var(--green)" },
-  { id: "cohort_analysis",    icon: "⧈", label: "Cohort Analysis",     desc: "User retention cohort heatmap",              color: "var(--purple)" },
-  { id: "anomaly_detection",  icon: "⚡", label: "Anomaly Detection",   desc: "Z-score & IQR outlier detection",            color: "var(--amber)" },
-  { id: "join_analysis",      icon: "⟺", label: "Join Analysis",       desc: "Optimal join strategy between two tables",   color: "var(--accent)" },
-  { id: "executive_summary",  icon: "◈", label: "Executive Summary",   desc: "KPIs, trends, and business alerts",          color: "var(--green)" },
+  { id: "explore_table", icon: "⬡", label: "Explore Table", desc: "Full EDA: schema, samples, stats, quality", color: "var(--accent)" },
+  { id: "funnel_analysis", icon: "◃", label: "Funnel Analysis", desc: "Conversion funnel with drop-off rates", color: "var(--green)" },
+  { id: "cohort_analysis", icon: "⧈", label: "Cohort Analysis", desc: "User retention cohort heatmap", color: "var(--purple)" },
+  { id: "anomaly_detection", icon: "⚡", label: "Anomaly Detection", desc: "Z-score & IQR outlier detection", color: "var(--amber)" },
+  { id: "join_analysis", icon: "⟺", label: "Join Analysis", desc: "Optimal join strategy between two tables", color: "var(--accent)" },
+  { id: "executive_summary", icon: "◈", label: "Executive Summary", desc: "KPIs, trends, and business alerts", color: "var(--green)" },
 ];
 
 export default function PromptRunner() {
@@ -20,6 +23,9 @@ export default function PromptRunner() {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showClaude, setShowClaude] = useState(false);
+  const [showGemini, setShowGemini] = useState(false);
+  const [showOpenAI, setShowOpenAI] = useState(false);
 
   function setArg(key: string, val: string) {
     setArgs((prev) => ({ ...prev, [key]: val }));
@@ -104,7 +110,25 @@ export default function PromptRunner() {
                 <span>Generated Prompt</span>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button onClick={copyPrompt} style={s.copyBtn}>
-                    {copied ? "✓ Copied!" : "Copy to clipboard"}
+                    {copied ? "✓ Copied!" : "Copy"}
+                  </button>
+                  <button
+                    onClick={() => setShowClaude(true)}
+                    style={{ ...s.copyBtn, background: "var(--accent)", color: "#000", borderColor: "var(--accent)" }}
+                  >
+                    ✦ Send to Claude
+                  </button>
+                  <button
+                    onClick={() => setShowGemini(true)}
+                    style={{ ...s.copyBtn, background: "#4285f4", color: "#fff", borderColor: "#4285f4" }}
+                  >
+                    ✸ Send to Gemini
+                  </button>
+                  <button
+                    onClick={() => setShowOpenAI(true)}
+                    style={{ ...s.copyBtn, background: "#10a37f", color: "#fff", borderColor: "#10a37f" }}
+                  >
+                    ⬡ Send to GPT-4o
                   </button>
                 </div>
               </div>
@@ -112,6 +136,24 @@ export default function PromptRunner() {
               <div style={s.promptFooter}>
                 Paste this prompt into Claude or any AI assistant. It already knows your schema and which MCP tools to use.
               </div>
+              {showClaude && prompt && (
+                <ClaudeResponse
+                  prompt={prompt}
+                  onClose={() => setShowClaude(false)}
+                />
+              )}
+              {showGemini && prompt && (
+                <GeminiResponse
+                  prompt={prompt}
+                  onClose={() => setShowGemini(false)}
+                />
+              )}
+              {showOpenAI && prompt && (
+                <OpenAIResponse
+                  prompt={prompt}
+                  onClose={() => setShowOpenAI(false)}
+                />
+              )}
             </div>
           )}
 
@@ -147,45 +189,45 @@ function PromptFields({ promptId, args, setArg }: { promptId: PromptId; args: Re
 
   switch (promptId) {
     case "explore_table":
-      return <>{F("schema","Schema","public","public")}{F("table","Table","users","",true)}{F("goal","Analysis Goal (optional)","What drives user churn?")}</>;
+      return <>{F("schema", "Schema", "public", "public")}{F("table", "Table", "users", "", true)}{F("goal", "Analysis Goal (optional)", "What drives user churn?")}</>;
     case "funnel_analysis":
       return <>
-        {F("schema","Schema","public","public")}
-        {F("eventTable","Event Table","events","",true)}
-        {F("userColumn","User ID Column","user_id","",true)}
-        {F("eventColumn","Event Column","event_name","",true)}
-        {F("steps","Funnel Steps (comma-separated)","signup,onboard,purchase","",true)}
-        {F("dateColumn","Date Column (optional)","created_at")}
+        {F("schema", "Schema", "public", "public")}
+        {F("eventTable", "Event Table", "events", "", true)}
+        {F("userColumn", "User ID Column", "user_id", "", true)}
+        {F("eventColumn", "Event Column", "event_name", "", true)}
+        {F("steps", "Funnel Steps (comma-separated)", "signup,onboard,purchase", "", true)}
+        {F("dateColumn", "Date Column (optional)", "created_at")}
       </>;
     case "cohort_analysis":
       return <>
-        {F("schema","Schema","public","public")}
-        {F("table","Activity Table","events","",true)}
-        {F("userColumn","User ID Column","user_id","",true)}
-        {F("dateColumn","Date Column","created_at","",true)}
-        {S("cohortPeriod","Cohort Period",["week","month"],"month")}
+        {F("schema", "Schema", "public", "public")}
+        {F("table", "Activity Table", "events", "", true)}
+        {F("userColumn", "User ID Column", "user_id", "", true)}
+        {F("dateColumn", "Date Column", "created_at", "", true)}
+        {S("cohortPeriod", "Cohort Period", ["week", "month"], "month")}
       </>;
     case "anomaly_detection":
       return <>
-        {F("schema","Schema","public","public")}
-        {F("table","Table","orders","",true)}
-        {F("metricColumn","Metric Column","amount","",true)}
-        {F("dateColumn","Date Column (optional)","created_at")}
-        {F("groupByColumn","Group By Column (optional)","status")}
+        {F("schema", "Schema", "public", "public")}
+        {F("table", "Table", "orders", "", true)}
+        {F("metricColumn", "Metric Column", "amount", "", true)}
+        {F("dateColumn", "Date Column (optional)", "created_at")}
+        {F("groupByColumn", "Group By Column (optional)", "status")}
       </>;
     case "join_analysis":
       return <>
-        {F("schema","Schema","public","public")}
-        {F("primaryTable","Primary Table","users","",true)}
-        {F("relatedTable","Related Table","orders","",true)}
-        {F("businessQuestion","Business Question","Which users have the highest order value?","",true)}
+        {F("schema", "Schema", "public", "public")}
+        {F("primaryTable", "Primary Table", "users", "", true)}
+        {F("relatedTable", "Related Table", "orders", "", true)}
+        {F("businessQuestion", "Business Question", "Which users have the highest order value?", "", true)}
       </>;
     case "executive_summary":
       return <>
-        {F("schema","Schema","public","public")}
-        {F("table","Metrics Table","orders","",true)}
-        {F("periodColumn","Period Column (optional)","created_at")}
-        {F("metrics","Metric Columns (comma-separated, optional)","revenue,order_count")}
+        {F("schema", "Schema", "public", "public")}
+        {F("table", "Metrics Table", "orders", "", true)}
+        {F("periodColumn", "Period Column (optional)", "created_at")}
+        {F("metrics", "Metric Columns (comma-separated, optional)", "revenue,order_count")}
       </>;
     default:
       return <></>;
@@ -200,7 +242,7 @@ const s: Record<string, React.CSSProperties> = {
   body: { display: "flex", flex: 1, overflow: "hidden" },
   cards: { width: 200, borderRight: "1px solid var(--border)", overflow: "auto", padding: 12, display: "flex", flexDirection: "column", gap: 6 },
   card: { background: "var(--bg-elevated)", borderWidth: "1px", borderStyle: "solid", borderColor: "var(--border)", borderRadius: "var(--radius)", padding: "12px", textAlign: "left" as const, cursor: "pointer", transition: "all 0.15s" },
-cardActive: { background: "var(--bg-hover)", borderColor: "var(--accent)" },
+  cardActive: { background: "var(--bg-hover)", borderColor: "var(--accent)" },
   cardIcon: { fontSize: 18, display: "block", marginBottom: 6 },
   cardLabel: { fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 },
   cardDesc: { fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 },
@@ -212,11 +254,11 @@ cardActive: { background: "var(--bg-hover)", borderColor: "var(--accent)" },
   buildBtn: { background: "var(--accent)", color: "#000", border: "none", borderRadius: "var(--radius)", padding: "10px 20px", fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600, cursor: "pointer" },
   errorBox: { padding: 16, background: "var(--red-dim)", border: "1px solid var(--red)", borderRadius: "var(--radius)" },
   errorPre: { marginTop: 8, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--red)", whiteSpace: "pre-wrap" as const },
-  promptBox: { background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" },
+  promptBox: { background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", display: "flex", flexDirection: "column" as const, maxHeight: 500 },
   promptHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", background: "var(--bg-elevated)", borderBottom: "1px solid var(--border)", fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" as const, letterSpacing: "0.8px" },
   copyBtn: { background: "var(--accent-dim)", border: "1px solid var(--accent-border)", color: "var(--accent)", padding: "4px 12px", borderRadius: 99, fontSize: 11, cursor: "pointer", fontFamily: "var(--font-mono)" },
-  promptPre: { padding: 20, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-secondary)", whiteSpace: "pre-wrap" as const, maxHeight: 400, overflow: "auto" },
-  promptFooter: { padding: "10px 16px", borderTop: "1px solid var(--border)", fontSize: 11, color: "var(--text-muted)", background: "var(--bg-elevated)" },
+  promptPre: { padding: 20, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-secondary)", whiteSpace: "pre-wrap" as const, overflow: "auto", flex: 1 },
+  promptFooter: { padding: "10px 16px", borderTop: "1px solid var(--border)", fontSize: 11, color: "var(--text-muted)", background: "var(--bg-elevated)", flexShrink: 0 },
   placeholder: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", textAlign: "center" as const, padding: 40 },
 };
 
