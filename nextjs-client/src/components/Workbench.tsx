@@ -6,8 +6,10 @@ import SchemaExplorer from "./SchemaExplorer";
 import QueryRunner from "./QueryRunner";
 import PromptRunner from "./PromptRunner";
 import ToolsPanel from "./ToolsPanel";
+import Chat from "./Chat";
+import DataLineage from "./DataLineage";
 
-type Tab = "schemas" | "query" | "tools" | "prompts";
+type Tab = "schemas" | "query" | "tools" | "prompts" | "chat" | "datamodel";
 
 export default function Workbench() {
   const { user, logout } = useAuth();
@@ -24,9 +26,11 @@ export default function Workbench() {
 
   const allTabs: { id: Tab; label: string; icon: string; roles: string[] }[] = [
     { id: "schemas", label: "Schema Explorer", icon: "⬡", roles: ["Admin", "Analyst", "Viewer"] },
+    { id: "datamodel", label: "Data Model", icon: "⟺", roles: ["Admin", "Analyst", "Viewer"] },
     { id: "query",   label: "SQL Query",       icon: "▶", roles: ["Admin", "Analyst", "Viewer"] },
     { id: "tools",   label: "Analysis Tools",  icon: "⚙", roles: ["Admin", "Analyst"] },
     { id: "prompts", label: "AI Prompts",       icon: "✦", roles: ["Admin", "Analyst"] },
+    { id: "chat", label: "Data Chat", icon: "💬", roles: ["Admin", "Analyst"] },
   ];
 
   const tabs = allTabs.filter((t) => t.roles.includes(user?.role || ""));
@@ -89,9 +93,11 @@ export default function Workbench() {
 ) : (
   <>
     {tab === "schemas" && <SchemaExplorer />}
+    {tab === "datamodel" && <DataLineage />}
     {tab === "query"   && <QueryRunner />}
     {tab === "tools"   && <ToolsPanel />}
     {tab === "prompts" && <PromptRunner />}
+    {tab === "chat"    && <Chat />}
   </>
 )}
       </main>
