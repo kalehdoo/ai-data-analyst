@@ -164,7 +164,7 @@ function setupServer(server) {
 
 server.tool(
   "dbt_get_model",
-  "Get full details of a dbt model including columns, description, materialization and file path",
+  "Get full details of a dbt model including columns, description, materialization and file path. IMPORTANT: These models live in Snowflake, NOT in SQLite. Do not run SQL using these table names via execute_query.",
   {
     model_name: { type: "string", description: "Name of the dbt model e.g. stg_orders, fct_orders" },
   },
@@ -204,13 +204,13 @@ server.tool(
       column_count: Object.keys(entry.columns || {}).length,
     };
 
-    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    return { content: [{ type: "text", text: `⚠ SNOWFLAKE MODEL — Do not run SQL via execute_query. This model exists in Snowflake, not SQLite.\n\n${JSON.stringify(result, null, 2)}` }] };
   }
 );
 
 server.tool(
   "dbt_get_lineage",
-  "Get the upstream (parents) and downstream (children) lineage for a dbt model",
+  "Get the upstream and downstream lineage for a dbt model. IMPORTANT: These are Snowflake models. Never run SQL with these table names via execute_query — they do not exist in SQLite.",
   {
     model_name: { type: "string", description: "Name of the dbt model" },
     depth: { type: "number", description: "How many levels to traverse (default 1, max 5)" },
@@ -284,7 +284,7 @@ server.tool(
 
 server.tool(
   "dbt_search_column",
-  "Search for a column name across all dbt models — find which models contain a column",
+  "Search for a column across all dbt Snowflake models. IMPORTANT: When writing SQL based on these results, always label it as Snowflake SQL and never run it via execute_query — these tables do not exist in SQLite.",
   {
     column_name: { type: "string", description: "Column name to search for (partial match supported)" },
   },
@@ -319,22 +319,23 @@ server.tool(
       return (order[a.layer] || 0) - (order[b.layer] || 0);
     });
 
-    return {
-      content: [{
-        type: "text",
-        text: JSON.stringify({
-          query: column_name,
-          total_models: matches.length,
-          results: matches,
-        }, null, 2),
-      }],
-    };
+    const searchResult = {
+        query: column_name,
+        total_models: matches.length,
+        results: matches,
+      };
+      return {
+        content: [{
+          type: "text",
+          text: `⚠ SNOWFLAKE MODELS — Do not run SQL via execute_query. Write the SQL but label it clearly as Snowflake SQL.\n\n${JSON.stringify(searchResult, null, 2)}`,
+        }],
+      };
   }
 );
 
 server.tool(
   "dbt_list_models",
-  "List all dbt models grouped by layer with their materialization and description",
+  "List all dbt ETL pipeline models. IMPORTANT: These are Snowflake models, not SQLite tables. Never use execute_query with these model names — they do not exist in the SQLite database.",
   {
     layer: { type: "string", description: "Filter by layer: source, staging, intermediate, mart, or all (default)" },
   },
@@ -373,13 +374,13 @@ server.tool(
       by_layer: grouped,
     };
 
-    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    return { content: [{ type: "text", text: `⚠ SNOWFLAKE MODELS — Do not run SQL via execute_query. Write the SQL but label it clearly as Snowflake SQL.\n\n${JSON.stringify(result, null, 2)}` }] };
   }
 );
 
 server.tool(
   "dbt_impact_analysis",
-  "Analyze the impact of changing or removing a dbt model — shows all downstream models that would be affected",
+  "Analyze the downstream impact of changing a dbt Snowflake model. IMPORTANT: These models are in Snowflake. Never run SQL with these table names via execute_query.",
   {
     model_name: { type: "string", description: "The model you plan to change or remove" },
   },

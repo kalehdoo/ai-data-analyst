@@ -312,16 +312,45 @@ const [columnSearch, setColumnSearch] = useState("");
     return "dim";
   }
 
+  // Compute only edges that are actually on the path to/from selected node
+  function getRelevantEdges(): Set<string> {
+    if (!selectedNode) return new Set();
+    const relevant = new Set<string>();
+
+    function collectUpstream(id: string, visited = new Set<string>()) {
+      if (visited.has(id)) return;
+      visited.add(id);
+      const node = nodes.find((n) => n.id === id);
+      if (!node) return;
+      node.parents.forEach((pid) => {
+        relevant.add(`${pid}->${id}`);
+        collectUpstream(pid, visited);
+      });
+    }
+
+    function collectDownstream(id: string, visited = new Set<string>()) {
+      if (visited.has(id)) return;
+      visited.add(id);
+      const node = nodes.find((n) => n.id === id);
+      if (!node) return;
+      node.children.forEach((cid) => {
+        relevant.add(`${id}->${cid}`);
+        collectDownstream(cid, visited);
+      });
+    }
+
+    collectUpstream(selectedNode.id);
+    collectDownstream(selectedNode.id);
+    return relevant;
+  }
+
   function getEdgeStyle(fromId: string, toId: string) {
     if (!selectedNode) return { stroke: "var(--border-bright)", opacity: 0.5, width: 1, dash: "4 3" };
-    const fromHL = getHighlight(fromId);
-    const toHL = getHighlight(toId);
-    if (fromHL === "selected" || toHL === "selected" ||
-        fromHL === "ancestor" || fromHL === "descendant" ||
-        toHL === "ancestor" || toHL === "descendant") {
+    const relevantEdges = getRelevantEdges();
+    if (relevantEdges.has(`${fromId}->${toId}`)) {
       return { stroke: "var(--accent)", opacity: 1, width: 2, dash: "none" };
     }
-    return { stroke: "var(--border)", opacity: 0.15, width: 1, dash: "4 3" };
+    return { stroke: "var(--border)", opacity: 0.1, width: 1, dash: "4 3" };
   }
 
   // ── Node height ──────────────────────────────────────────────────────────────
@@ -493,7 +522,13 @@ const [columnSearch, setColumnSearch] = useState("");
 
               {nodes.map((node) =>
                 node.children
-                  .filter((childId) => visibleIds.has(childId) && visibleIds.has(node.id))
+                  .filter((childId) => {
+                    if (!visibleIds.has(childId) || !visibleIds.has(node.id)) return false;
+                    if (selectedNode) {
+                      return getRelevantEdges().has(`${node.id}->${childId}`);
+                    }
+                    return true;
+                  })
                   .map((childId) => {
                     const child = nodes.find((n) => n.id === childId);
                     if (!child) return null;

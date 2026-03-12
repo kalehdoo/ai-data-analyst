@@ -508,34 +508,72 @@ const claudeTools: Anthropic.Tool[] = [
   },
 ];
 
-const SYSTEM_PROMPT = `You are an expert data analyst and data engineer assistant with direct access to:
-1. A SQLite database (via execute_query, sample_table, column_stats, top_values etc.)
-2. A dbt data pipeline manifest (via dbt_list_models, dbt_get_model, dbt_get_lineage, dbt_search_column, dbt_impact_analysis)
+function buildSystemPrompt(contextMode: string, schema: string): string {
+  const dbSection = `DATABASE (SQLite):
+- Use execute_query, sample_table, column_stats, top_values, time_series for live data
+- Only SELECT queries — never INSERT/UPDATE/DELETE
+- Results are real live data from SQLite Cloud
 
-DATABASE APPROACH:
-- When asked about data, ALWAYS use tools to get real data
-- Start by sampling or querying the relevant table
-- Use column_stats and top_values to understand distributions
-- Use time_series for trend analysis
-- Only write SELECT queries, never INSERT/UPDATE/DELETE
+DATABASE SCHEMA:
+${schema}`;
 
-DBT / ETL LINEAGE APPROACH:
-- When asked about data pipelines, models, transformations or lineage use the dbt_ tools
-- Use dbt_list_models to get an overview of the pipeline
-- Use dbt_get_lineage to trace how data flows from sources to marts
-- Use dbt_search_column to find where a specific column exists across models
-- Use dbt_impact_analysis to assess risk of changing a model
-- Explain lineage in plain English — sources, staging, intermediate, marts
+  const dbtSection = `dbt ETL PIPELINE (Snowflake):
+- Use dbt_list_models, dbt_get_model, dbt_get_lineage, dbt_search_column, dbt_impact_analysis
+- These tools read the dbt manifest — schema definitions only, NO live data
+- When writing SQL in dbt mode, write Snowflake-compatible SQL
+- ALWAYS label dbt SQL clearly: add a comment -- Run this in Snowflake (not SQLite)
+- NEVER call execute_query with dbt model names — they don't exist in SQLite`;
 
-GENERAL:
-- Chain multiple tool calls to build a complete picture
-- Always show actual data from tool results
-- Explain findings in plain business language`;
+  const base = `You are an expert data analyst and data engineer assistant.`;
+
+  if (contextMode === "sqlite") {
+    return `${base}
+
+You are in SQLITE MODE — only query the live SQLite database.
+${dbSection}
+
+RULES:
+- Only use database tools (execute_query, sample_table etc.)
+- Do NOT use dbt_ tools
+- Always run queries and show real results`;
+  }
+
+  if (contextMode === "dbt") {
+    return `${base}
+
+You are in DBT MODE — only use the dbt manifest to answer questions.
+${dbtSection}
+
+RULES:
+- Only use dbt_ tools (dbt_list_models, dbt_get_model, dbt_get_lineage, dbt_search_column, dbt_impact_analysis)
+- Do NOT call execute_query — dbt tables do not exist in SQLite
+- When you write SQL, always add the comment: -- ⚠ Run this in Snowflake, not SQLite
+- Explain which dbt models are relevant and why
+- Format SQL clearly so the user can copy and run it in Snowflake`;
+  }
+
+  // both
+  return `${base}
+
+You are in BOTH MODE — use SQLite for live data AND dbt manifest for schema understanding.
+${dbSection}
+
+${dbtSection}
+
+RULES:
+- Use dbt_ tools to understand schema and lineage
+- Use database tools to query live SQLite data
+- Clearly label which world each answer comes from:
+  - "From SQLite (live data):" for database results
+  - "From dbt manifest (Snowflake schema):" for dbt results
+- If a question asks about a table that exists in dbt but NOT in SQLite, explain this clearly
+- Never run execute_query with dbt model names`;
+}
 
 export async function POST(req: NextRequest) {
-  const { messages, model, schema } = await req.json();
+  const { messages, model, schema, contextMode = "sqlite" } = await req.json();
 
-  const systemWithSchema = `${SYSTEM_PROMPT}\n\nDATABASE SCHEMA:\n${schema}`;
+  const systemWithSchema = buildSystemPrompt(contextMode, schema);
   const encoder = new TextEncoder();
 
   // Helper to send SSE events
@@ -549,7 +587,12 @@ export async function POST(req: NextRequest) {
     const geminiModel = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: systemWithSchema,
-      tools: geminiTools,
+      tools: [{ functionDeclarations: geminiTools[0].functionDeclarations.filter((t) => {
+  const isDbtTool = t.name.startsWith("dbt_");
+  if (contextMode === "sqlite") return !isDbtTool;
+  if (contextMode === "dbt") return isDbtTool;
+  return true;
+})}],
     });
 
     const readable = makeStream(async (controller) => {
@@ -654,7 +697,12 @@ export async function POST(req: NextRequest) {
             model: "gpt-4o-mini",
             max_tokens: 8000,
             messages: openaiMessages,
-            tools: openaiTools,
+            tools: openaiTools.filter((t) => {
+  const isDbtTool = t.function.name.startsWith("dbt_");
+  if (contextMode === "sqlite") return !isDbtTool;
+  if (contextMode === "dbt") return isDbtTool;
+  return true;
+}),
             tool_choice: "auto",
           });
 
@@ -739,7 +787,12 @@ export async function POST(req: NextRequest) {
             max_tokens: 8000,
             system: systemWithSchema,
             messages: claudeMessages,
-            tools: claudeTools,
+            tools: claudeTools.filter((t) => {
+  const isDbtTool = t.name.startsWith("dbt_");
+  if (contextMode === "sqlite") return !isDbtTool;
+  if (contextMode === "dbt") return isDbtTool;
+  return true;
+}),
           });
 
           // Stream text blocks

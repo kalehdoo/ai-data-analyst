@@ -34,6 +34,7 @@ export default function Chat() {
   const [schema, setSchema] = useState("");
   const [runningQuery, setRunningQuery] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [contextMode, setContextMode] = useState<"sqlite" | "dbt" | "both">("sqlite");
 
   // Load persisted chat and model
   useEffect(() => {
@@ -56,6 +57,19 @@ export default function Chat() {
   useEffect(() => {
     localStorage.setItem(MODEL_KEY, model);
   }, [model]);
+
+  const CONTEXT_KEY = "rana_chat_context";
+
+useEffect(() => {
+  try {
+    const saved = localStorage.getItem(CONTEXT_KEY) as "sqlite" | "dbt" | "both";
+    if (saved) setContextMode(saved);
+  } catch (_) {}
+}, []);
+
+useEffect(() => {
+  localStorage.setItem(CONTEXT_KEY, contextMode);
+}, [contextMode]);
 
   // Auto scroll to bottom
   useEffect(() => {
@@ -121,13 +135,14 @@ export default function Chat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: newMessages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-          model,
-          schema,
-        }),
+  messages: newMessages.map((m) => ({
+    role: m.role,
+    content: m.content,
+  })),
+  model,
+  schema,
+  contextMode,
+}),
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -247,6 +262,10 @@ while (true) {
           <p style={s.sub}>Ask questions about your data in plain English</p>
         </div>
         <div style={s.headerRight}>
+  
+  
+
+  
           {/* Model selector */}
           <div style={s.modelSelector}>
             {modelOptions.filter((m) => m.available).map((opt) => (
@@ -336,21 +355,57 @@ while (true) {
 
       {/* Input */}
       <div style={s.inputArea}>
-        <textarea
-          style={s.input}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask a question about your data… (⌘+Enter to send)"
-          rows={3}
-        />
-        <button
-          onClick={sendMessage}
-          disabled={loading || !input.trim()}
-          style={{ ...s.sendBtn, opacity: loading || !input.trim() ? 0.5 : 1 }}
-        >
-          {loading ? "⟳" : "Send ↑"}
-        </button>
+  {/* Context mode toggle — above input right side */}
+  <div style={s.contextRow}>
+    <span style={s.contextLabel}>Context:</span>
+    {([
+      { id: "sqlite", label: "🗄 sqlite", desc: "Query live database" },
+      { id: "dbt",    label: "⬡ dbt",    desc: "dbt schema — Snowflake SQL only" },
+      { id: "both",   label: "⟺ Both",   desc: "Search dbt schema and SQLite" },
+    ] as const).map((opt) => {
+      const activeColor = opt.id === "sqlite" ? "var(--accent)" : opt.id === "dbt" ? "#bc8cff" : "#3fb950";
+      const isActive = contextMode === opt.id;
+      return (
+        <div key={opt.id} style={s.contextBtnWrap}>
+          <button
+            onClick={() => setContextMode(opt.id)}
+            style={{
+              ...s.contextBtn,
+              ...(isActive ? {
+                background: activeColor,
+                color: "#000",
+                borderTop: `1px solid ${activeColor}`,
+                borderRight: `1px solid ${activeColor}`,
+                borderBottom: `1px solid ${activeColor}`,
+                borderLeft: `1px solid ${activeColor}`,
+                fontWeight: 600,
+              } : {}),
+            }}
+          >
+            {opt.label}
+          </button>
+          
+        </div>
+      );
+    })}
+  </div>
+  <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+  <textarea
+    style={s.input}
+    value={input}
+    onChange={(e) => setInput(e.target.value)}
+    onKeyDown={handleKeyDown}
+    placeholder="Ask a question about your data… (⌘+Enter to send)"
+    rows={3}
+  />
+  <button
+    onClick={sendMessage}
+    disabled={loading || !input.trim()}
+    style={{ ...s.sendBtn, opacity: loading || !input.trim() ? 0.5 : 1 }}
+  >
+    {loading ? "⟳" : "Send ↑"}
+  </button>
+</div>
       </div>
     </div>
   );
@@ -472,10 +527,10 @@ function QueryResultTable({ result }: { result: QueryResult }) {
 
 const s: Record<string, React.CSSProperties> = {
   root: { display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" },
-  header: { padding: "20px 28px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
+  header: { padding: "20px 28px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 },
   title: { fontSize: 16, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 },
   sub: { color: "var(--text-secondary)", fontSize: 13 },
-  headerRight: { display: "flex", alignItems: "center", gap: 12 },
+  headerRight: { display: "flex", alignItems: "center", gap: 12, marginLeft: "auto" },
   modelSelector: { display: "flex", gap: 6 },
   modelBtn: { background: "var(--bg-elevated)", borderTop: "1px solid var(--border-bright)", borderRight: "1px solid var(--border-bright)", borderBottom: "1px solid var(--border-bright)", borderLeft: "1px solid var(--border-bright)", color: "var(--text-secondary)", padding: "5px 12px", borderRadius: 99, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-mono)", transition: "all 0.15s" },
   clearBtn: { background: "none", border: "1px solid var(--border-bright)", color: "var(--text-muted)", padding: "5px 12px", borderRadius: "var(--radius)", fontSize: 12, cursor: "pointer" },
@@ -494,9 +549,14 @@ const s: Record<string, React.CSSProperties> = {
   messageContent: { background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "12px 16px", fontSize: 13, lineHeight: 1.6 },
   thinking: { display: "flex", gap: 4, padding: "12px 16px", background: "var(--bg-panel)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" },
   dot: { width: 6, height: 6, borderRadius: "50%", background: "var(--text-muted)", animation: "pulse 1.4s infinite" },
-  inputArea: { padding: "16px 28px", borderTop: "1px solid var(--border)", display: "flex", gap: 12, alignItems: "flex-end" },
+  inputArea:    { padding: "8px 28px 16px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column" as const, gap: 8 },
+contextRow:   { display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" },
   input: { flex: 1, background: "var(--bg-elevated)", border: "1px solid var(--border-bright)", borderRadius: "var(--radius)", padding: "10px 14px", color: "var(--text-primary)", fontFamily: "var(--font-sans)", fontSize: 14, outline: "none", resize: "none" as const, lineHeight: 1.5 },
   sendBtn: { background: "var(--accent)", color: "#000", border: "none", borderRadius: "var(--radius)", padding: "10px 20px", fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" as const },
+  contextToggle:  { display: "flex", alignItems: "center", gap: 4 },
+contextLabel:   { fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)", marginRight: 4 },
+contextBtn:     { background: "var(--bg-elevated)", borderTop: "1px solid var(--border-bright)", borderRight: "1px solid var(--border-bright)", borderBottom: "1px solid var(--border-bright)", borderLeft: "1px solid var(--border-bright)", color: "var(--text-secondary)", padding: "5px 10px", borderRadius: 99, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-mono)" },
+modeBanner:     { fontSize: 11, padding: "4px 10px", borderRadius: 99, border: "1px solid", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" as const },
 };
 
 const cb: Record<string, React.CSSProperties> = {
