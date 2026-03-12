@@ -22,12 +22,14 @@ export default function Workbench() {
       .catch((e: Error) => { setConnected("error"); setStatusMsg(e.message); });
   }, []);
 
-  const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "schemas", label: "Schema Explorer", icon: "⬡" },
-    { id: "query",   label: "SQL Query",       icon: "▶" },
-    { id: "tools",   label: "Analysis Tools",  icon: "⚙" },
-    { id: "prompts", label: "AI Prompts",       icon: "✦" },
+  const allTabs: { id: Tab; label: string; icon: string; roles: string[] }[] = [
+    { id: "schemas", label: "Schema Explorer", icon: "⬡", roles: ["Admin", "Analyst", "Viewer"] },
+    { id: "query",   label: "SQL Query",       icon: "▶", roles: ["Admin", "Analyst", "Viewer"] },
+    { id: "tools",   label: "Analysis Tools",  icon: "⚙", roles: ["Admin", "Analyst"] },
+    { id: "prompts", label: "AI Prompts",       icon: "✦", roles: ["Admin", "Analyst"] },
   ];
+
+  const tabs = allTabs.filter((t) => t.roles.includes(user?.role || ""));
 
   return (
     <div style={s.root}>
@@ -35,12 +37,12 @@ export default function Workbench() {
       <aside style={s.sidebar}>
         <div style={s.sideTop}>
           <div style={s.brand}>
-            <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
-              <rect width="32" height="32" rx="8" fill="var(--accent-dim)" />
-              <path d="M8 22 L16 10 L24 22" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <circle cx="16" cy="10" r="2" fill="var(--accent)" />
-            </svg>
-            <span style={s.brandText}>AI Data Analyst</span>
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="var(--accent-dim)" />
+            <path d="M8 22 L16 10 L24 22" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            <circle cx="16" cy="10" r="2" fill="var(--accent)" />
+          </svg>
+            <span style={s.brandText}>Retrieval Augmented Natural Agent</span>
           </div>
 
           <div style={s.statusRow}>

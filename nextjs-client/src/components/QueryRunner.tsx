@@ -1,4 +1,5 @@
 "use client";
+import { useAuth } from "@/lib/authContext";
 import { useState } from "react";
 import * as mcp from "@/lib/mcpClient";
 
@@ -18,6 +19,8 @@ interface QueryResult {
 }
 
 export default function QueryRunner() {
+  const { user } = useAuth();
+  const isViewer = user?.role === "Viewer";
   const [sql, setSql] = useState(STARTER_QUERIES[0].sql);
   const [result, setResult] = useState<QueryResult | null>(null);
   const [error, setError] = useState("");
@@ -75,19 +78,30 @@ setResult(data);
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
-              <button onClick={runQuery} disabled={running} style={{ ...s.runBtn, opacity: running ? 0.6 : 1 }}>
-                {running ? "Running…" : "▶ Run  (⌘↵)"}
-              </button>
+              {isViewer && (
+  <div style={s.viewerBanner}>
+    🔒 You have read-only access. Contact an Admin to run queries.
+  </div>
+)}
+              <button
+  onClick={runQuery}
+  disabled={running || isViewer}
+  style={{ ...s.runBtn, opacity: running || isViewer ? 0.6 : 1 }}
+  title={isViewer ? "Viewers cannot run queries" : ""}
+>
+  {isViewer ? "🔒 Read Only" : running ? "Running…" : "▶ Run  (⌘↵)"}
+</button>
             </div>
           </div>
           <textarea
-            style={s.textarea}
-            value={sql}
-            onChange={(e) => setSql(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="SELECT * FROM your_table LIMIT 100;"
-            spellCheck={false}
-          />
+  style={{ ...s.textarea, opacity: isViewer ? 0.6 : 1 }}
+  value={sql}
+  onChange={(e) => !isViewer && setSql(e.target.value)}
+  onKeyDown={handleKeyDown}
+  placeholder="SELECT * FROM your_table LIMIT 100;"
+  spellCheck={false}
+  readOnly={isViewer}
+/>
         </div>
 
         {/* Results */}
@@ -216,4 +230,12 @@ const s: Record<string, React.CSSProperties> = {
   th: { padding: "8px 14px", textAlign: "left" as const, fontSize: 11, fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase" as const, letterSpacing: "0.5px", background: "var(--bg-elevated)", borderBottom: "1px solid var(--border)", position: "sticky" as const, top: 0, whiteSpace: "nowrap" as const },
   td: { padding: "7px 14px", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono)", fontSize: 12 },
   placeholder: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", textAlign: "center" as const },
+  viewerBanner: {
+  padding: "10px 28px",
+  background: "var(--amber-dim)",
+  borderBottom: "1px solid var(--amber)",
+  color: "var(--amber)",
+  fontSize: 12,
+  fontFamily: "var(--font-mono)",
+},
 };

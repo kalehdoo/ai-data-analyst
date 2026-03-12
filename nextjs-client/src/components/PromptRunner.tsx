@@ -1,4 +1,5 @@
 "use client";
+import { useAuth } from "@/lib/authContext";
 import { useState } from "react";
 import * as mcp from "@/lib/mcpClient";
 import ClaudeResponse from "./ClaudeResponse";
@@ -17,6 +18,9 @@ const PROMPTS: { id: PromptId; icon: string; label: string; desc: string; color:
 ];
 
 export default function PromptRunner() {
+  const { user } = useAuth();
+const isAdmin = user?.role === "Admin";
+const isAnalyst = user?.role === "Analyst";
   const [activePrompt, setActivePrompt] = useState<PromptId>("explore_table");
   const [args, setArgs] = useState<Record<string, string>>({});
   const [prompt, setPrompt] = useState<string>("");
@@ -109,28 +113,34 @@ export default function PromptRunner() {
               <div style={s.promptHeader}>
                 <span>Generated Prompt</span>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={copyPrompt} style={s.copyBtn}>
-                    {copied ? "✓ Copied!" : "Copy"}
-                  </button>
-                  <button
-                    onClick={() => setShowClaude(true)}
-                    style={{ ...s.copyBtn, background: "var(--accent)", color: "#000", borderColor: "var(--accent)" }}
-                  >
-                    ✦ Send to Claude
-                  </button>
-                  <button
-                    onClick={() => setShowGemini(true)}
-                    style={{ ...s.copyBtn, background: "#4285f4", color: "#fff", borderColor: "#4285f4" }}
-                  >
-                    ✸ Send to Gemini
-                  </button>
-                  <button
-                    onClick={() => setShowOpenAI(true)}
-                    style={{ ...s.copyBtn, background: "#10a37f", color: "#fff", borderColor: "#10a37f" }}
-                  >
-                    ⬡ Send to GPT-4o
-                  </button>
-                </div>
+  <button onClick={copyPrompt} style={s.copyBtn}>
+    {copied ? "✓ Copied!" : "Copy"}
+  </button>
+  {(isAdmin || isAnalyst) && (
+    <button
+      onClick={() => setShowGemini(true)}
+      style={{ ...s.copyBtn, background: "#4285f4", color: "#fff", borderColor: "#4285f4" }}
+    >
+      ✸ Send to Gemini
+    </button>
+  )}
+  {isAdmin && (
+    <>
+      <button
+        onClick={() => setShowClaude(true)}
+        style={{ ...s.copyBtn, background: "var(--accent)", color: "#000", borderColor: "var(--accent)" }}
+      >
+        ✦ Send to Claude
+      </button>
+      <button
+        onClick={() => setShowOpenAI(true)}
+        style={{ ...s.copyBtn, background: "#10a37f", color: "#fff", borderColor: "#10a37f" }}
+      >
+        ⬡ Send to GPT-4o
+      </button>
+    </>
+  )}
+</div>
               </div>
               <pre style={s.promptPre}>{prompt}</pre>
               <div style={s.promptFooter}>

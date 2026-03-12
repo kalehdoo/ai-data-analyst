@@ -28,13 +28,12 @@ export default function LoginPage() {
             <rect width="32" height="32" rx="8" fill="var(--accent-dim)" />
             <path d="M8 22 L16 10 L24 22" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             <circle cx="16" cy="10" r="2" fill="var(--accent)" />
-            <line x1="10" y1="18" x2="22" y2="18" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 2" />
           </svg>
-          <span style={styles.logoText}>AI Data Analyst</span>
+          <span style={styles.logoText}>Retrieval Augmented Natural Agent Workbench</span>
         </div>
 
-        <h1 style={styles.heading}>Sign in to your workbench</h1>
-        <p style={styles.sub}>AI RAG MCP Data Workbench</p>
+        <h1 style={styles.heading}>Sign in</h1>
+        <p style={styles.sub}>AI RAG MCP Workbench</p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <label style={styles.label}>Username</label>
@@ -76,7 +75,9 @@ export default function LoginPage() {
 
         <div style={styles.hint}>
           <span style={{ color: "var(--text-muted)", fontSize: 12 }}>Demo credentials: </span>
-          <code style={{ color: "var(--text-secondary)", fontSize: 12 }}>admin / analyst2024!</code>
+          <code style={{ color: "var(--text-secondary)", fontSize: 12 }}>admin / analyst2024!</code><br />
+          <code style={{ color: "var(--text-secondary)", fontSize: 12 }}>analyst / data@pass1</code> <br />
+          <code style={{ color: "var(--text-secondary)", fontSize: 12 }}>viewer / view0nly!</code>
         </div>
       </div>
     </div>
