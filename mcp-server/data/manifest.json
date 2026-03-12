@@ -1,0 +1,874 @@
+{
+  "metadata": {
+    "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v10/manifest.json",
+    "dbt_version": "1.7.4",
+    "generated_at": "2026-03-12T10:00:00.000000Z",
+    "invocation_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "env": {},
+    "project_name": "ecommerce_dw",
+    "adapter_type": "snowflake"
+  },
+
+  "nodes": {
+
+    "model.ecommerce_dw.stg_orders": {
+      "unique_id": "model.ecommerce_dw.stg_orders",
+      "name": "stg_orders",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "staging/ecommerce/stg_orders.sql",
+      "original_file_path": "models/staging/ecommerce/stg_orders.sql",
+      "fqn": ["ecommerce_dw", "staging", "ecommerce", "stg_orders"],
+      "schema": "staging",
+      "database": "ANALYTICS",
+      "alias": "stg_orders",
+      "description": "Staged orders from the ecommerce operational database. Cleans and standardizes raw order data.",
+      "tags": ["staging", "ecommerce", "daily"],
+      "config": {
+        "materialized": "view",
+        "schema": "staging",
+        "tags": ["staging", "ecommerce"]
+      },
+      "depends_on": {
+        "nodes": ["source.ecommerce_dw.ecommerce_db.raw_orders"],
+        "macros": []
+      },
+      "refs": [],
+      "sources": [["ecommerce_db", "raw_orders"]],
+      "columns": {
+        "order_id":       { "name": "order_id",       "description": "Unique order identifier",          "data_type": "VARCHAR" },
+        "customer_id":    { "name": "customer_id",    "description": "FK to stg_customers",              "data_type": "VARCHAR" },
+        "order_date":     { "name": "order_date",     "description": "Date order was placed",            "data_type": "DATE" },
+        "status":         { "name": "status",         "description": "Order status (placed/shipped/delivered/cancelled)", "data_type": "VARCHAR" },
+        "total_amount":   { "name": "total_amount",   "description": "Total order value in USD",         "data_type": "NUMERIC" },
+        "currency_code":  { "name": "currency_code",  "description": "ISO currency code",                "data_type": "VARCHAR" },
+        "channel":        { "name": "channel",        "description": "Sales channel (web/mobile/store)", "data_type": "VARCHAR" },
+        "created_at":     { "name": "created_at",     "description": "Row creation timestamp",           "data_type": "TIMESTAMP" },
+        "updated_at":     { "name": "updated_at",     "description": "Row last updated timestamp",       "data_type": "TIMESTAMP" }
+      }
+    },
+
+    "model.ecommerce_dw.stg_customers": {
+      "unique_id": "model.ecommerce_dw.stg_customers",
+      "name": "stg_customers",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "staging/ecommerce/stg_customers.sql",
+      "original_file_path": "models/staging/ecommerce/stg_customers.sql",
+      "fqn": ["ecommerce_dw", "staging", "ecommerce", "stg_customers"],
+      "schema": "staging",
+      "database": "ANALYTICS",
+      "alias": "stg_customers",
+      "description": "Staged customer data cleaned and deduplicated from the CRM source system.",
+      "tags": ["staging", "ecommerce", "daily"],
+      "config": { "materialized": "view", "schema": "staging" },
+      "depends_on": {
+        "nodes": ["source.ecommerce_dw.ecommerce_db.raw_customers"],
+        "macros": []
+      },
+      "refs": [],
+      "sources": [["ecommerce_db", "raw_customers"]],
+      "columns": {
+        "customer_id":    { "name": "customer_id",    "description": "Unique customer identifier",        "data_type": "VARCHAR" },
+        "first_name":     { "name": "first_name",     "description": "Customer first name",               "data_type": "VARCHAR" },
+        "last_name":      { "name": "last_name",      "description": "Customer last name",                "data_type": "VARCHAR" },
+        "email":          { "name": "email",          "description": "Customer email address",            "data_type": "VARCHAR" },
+        "country_code":   { "name": "country_code",   "description": "ISO 2-letter country code",        "data_type": "VARCHAR" },
+        "segment":        { "name": "segment",        "description": "Customer segment (B2B/B2C/VIP)",    "data_type": "VARCHAR" },
+        "signup_date":    { "name": "signup_date",    "description": "Date customer registered",          "data_type": "DATE" },
+        "is_active":      { "name": "is_active",      "description": "Whether customer is active",        "data_type": "BOOLEAN" },
+        "created_at":     { "name": "created_at",     "description": "Row creation timestamp",            "data_type": "TIMESTAMP" }
+      }
+    },
+
+    "model.ecommerce_dw.stg_products": {
+      "unique_id": "model.ecommerce_dw.stg_products",
+      "name": "stg_products",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "staging/ecommerce/stg_products.sql",
+      "original_file_path": "models/staging/ecommerce/stg_products.sql",
+      "fqn": ["ecommerce_dw", "staging", "ecommerce", "stg_products"],
+      "schema": "staging",
+      "database": "ANALYTICS",
+      "alias": "stg_products",
+      "description": "Staged product catalog data from the PIM system.",
+      "tags": ["staging", "ecommerce", "daily"],
+      "config": { "materialized": "view", "schema": "staging" },
+      "depends_on": {
+        "nodes": ["source.ecommerce_dw.ecommerce_db.raw_products"],
+        "macros": []
+      },
+      "refs": [],
+      "sources": [["ecommerce_db", "raw_products"]],
+      "columns": {
+        "product_id":     { "name": "product_id",     "description": "Unique product identifier",         "data_type": "VARCHAR" },
+        "product_name":   { "name": "product_name",   "description": "Product display name",              "data_type": "VARCHAR" },
+        "sku":            { "name": "sku",             "description": "Stock keeping unit",                "data_type": "VARCHAR" },
+        "category":       { "name": "category",       "description": "Top level product category",        "data_type": "VARCHAR" },
+        "subcategory":    { "name": "subcategory",    "description": "Product subcategory",               "data_type": "VARCHAR" },
+        "brand":          { "name": "brand",          "description": "Brand name",                        "data_type": "VARCHAR" },
+        "unit_cost":      { "name": "unit_cost",      "description": "Product cost in USD",               "data_type": "NUMERIC" },
+        "unit_price":     { "name": "unit_price",     "description": "Retail price in USD",               "data_type": "NUMERIC" },
+        "is_active":      { "name": "is_active",      "description": "Whether product is active",         "data_type": "BOOLEAN" }
+      }
+    },
+
+    "model.ecommerce_dw.stg_order_items": {
+      "unique_id": "model.ecommerce_dw.stg_order_items",
+      "name": "stg_order_items",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "staging/ecommerce/stg_order_items.sql",
+      "original_file_path": "models/staging/ecommerce/stg_order_items.sql",
+      "fqn": ["ecommerce_dw", "staging", "ecommerce", "stg_order_items"],
+      "schema": "staging",
+      "database": "ANALYTICS",
+      "alias": "stg_order_items",
+      "description": "Individual line items within each order.",
+      "tags": ["staging", "ecommerce", "daily"],
+      "config": { "materialized": "view", "schema": "staging" },
+      "depends_on": {
+        "nodes": ["source.ecommerce_dw.ecommerce_db.raw_order_items"],
+        "macros": []
+      },
+      "refs": [],
+      "sources": [["ecommerce_db", "raw_order_items"]],
+      "columns": {
+        "order_item_id":  { "name": "order_item_id",  "description": "Unique order item identifier",      "data_type": "VARCHAR" },
+        "order_id":       { "name": "order_id",       "description": "FK to stg_orders",                  "data_type": "VARCHAR" },
+        "product_id":     { "name": "product_id",     "description": "FK to stg_products",                "data_type": "VARCHAR" },
+        "quantity":       { "name": "quantity",       "description": "Number of units ordered",           "data_type": "INTEGER" },
+        "unit_price":     { "name": "unit_price",     "description": "Price per unit at time of order",   "data_type": "NUMERIC" },
+        "discount_amount":{ "name": "discount_amount","description": "Discount applied to line item",     "data_type": "NUMERIC" },
+        "line_total":     { "name": "line_total",     "description": "Total line item value after discount","data_type": "NUMERIC" }
+      }
+    },
+
+    "model.ecommerce_dw.stg_payments": {
+      "unique_id": "model.ecommerce_dw.stg_payments",
+      "name": "stg_payments",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "staging/payments/stg_payments.sql",
+      "original_file_path": "models/staging/payments/stg_payments.sql",
+      "fqn": ["ecommerce_dw", "staging", "payments", "stg_payments"],
+      "schema": "staging",
+      "database": "ANALYTICS",
+      "alias": "stg_payments",
+      "description": "Staged payment transactions from the payment gateway.",
+      "tags": ["staging", "payments", "daily"],
+      "config": { "materialized": "view", "schema": "staging" },
+      "depends_on": {
+        "nodes": ["source.ecommerce_dw.payments_db.raw_payments"],
+        "macros": []
+      },
+      "refs": [],
+      "sources": [["payments_db", "raw_payments"]],
+      "columns": {
+        "payment_id":     { "name": "payment_id",     "description": "Unique payment identifier",         "data_type": "VARCHAR" },
+        "order_id":       { "name": "order_id",       "description": "FK to stg_orders",                  "data_type": "VARCHAR" },
+        "payment_method": { "name": "payment_method", "description": "Payment method (card/paypal/bank)", "data_type": "VARCHAR" },
+        "amount":         { "name": "amount",         "description": "Payment amount in USD",             "data_type": "NUMERIC" },
+        "status":         { "name": "status",         "description": "Payment status (success/failed/refunded)", "data_type": "VARCHAR" },
+        "payment_date":   { "name": "payment_date",   "description": "Date payment was processed",        "data_type": "DATE" }
+      }
+    },
+
+    "model.ecommerce_dw.stg_sessions": {
+      "unique_id": "model.ecommerce_dw.stg_sessions",
+      "name": "stg_sessions",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "staging/analytics/stg_sessions.sql",
+      "original_file_path": "models/staging/analytics/stg_sessions.sql",
+      "fqn": ["ecommerce_dw", "staging", "analytics", "stg_sessions"],
+      "schema": "staging",
+      "database": "ANALYTICS",
+      "alias": "stg_sessions",
+      "description": "Web and mobile session data from the event tracking platform.",
+      "tags": ["staging", "analytics", "hourly"],
+      "config": { "materialized": "view", "schema": "staging" },
+      "depends_on": {
+        "nodes": ["source.ecommerce_dw.event_db.raw_sessions"],
+        "macros": []
+      },
+      "refs": [],
+      "sources": [["event_db", "raw_sessions"]],
+      "columns": {
+        "session_id":     { "name": "session_id",     "description": "Unique session identifier",         "data_type": "VARCHAR" },
+        "customer_id":    { "name": "customer_id",    "description": "FK to stg_customers (nullable)",   "data_type": "VARCHAR" },
+        "session_start":  { "name": "session_start",  "description": "Session start timestamp",          "data_type": "TIMESTAMP" },
+        "session_end":    { "name": "session_end",    "description": "Session end timestamp",            "data_type": "TIMESTAMP" },
+        "channel":        { "name": "channel",        "description": "Acquisition channel",               "data_type": "VARCHAR" },
+        "device_type":    { "name": "device_type",    "description": "Device type (desktop/mobile/tablet)","data_type": "VARCHAR" },
+        "page_views":     { "name": "page_views",     "description": "Number of page views in session",  "data_type": "INTEGER" },
+        "converted":      { "name": "converted",      "description": "Whether session resulted in order", "data_type": "BOOLEAN" }
+      }
+    },
+
+    "model.ecommerce_dw.stg_inventory": {
+      "unique_id": "model.ecommerce_dw.stg_inventory",
+      "name": "stg_inventory",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "staging/warehouse/stg_inventory.sql",
+      "original_file_path": "models/staging/warehouse/stg_inventory.sql",
+      "fqn": ["ecommerce_dw", "staging", "warehouse", "stg_inventory"],
+      "schema": "staging",
+      "database": "ANALYTICS",
+      "alias": "stg_inventory",
+      "description": "Staged inventory snapshots from the warehouse management system.",
+      "tags": ["staging", "warehouse", "daily"],
+      "config": { "materialized": "view", "schema": "staging" },
+      "depends_on": {
+        "nodes": ["source.ecommerce_dw.warehouse_db.raw_inventory"],
+        "macros": []
+      },
+      "refs": [],
+      "sources": [["warehouse_db", "raw_inventory"]],
+      "columns": {
+        "inventory_id":   { "name": "inventory_id",   "description": "Unique inventory record ID",        "data_type": "VARCHAR" },
+        "product_id":     { "name": "product_id",     "description": "FK to stg_products",                "data_type": "VARCHAR" },
+        "warehouse_code": { "name": "warehouse_code", "description": "Warehouse location code",           "data_type": "VARCHAR" },
+        "quantity_on_hand":{ "name": "quantity_on_hand","description": "Units available in warehouse",    "data_type": "INTEGER" },
+        "reorder_point":  { "name": "reorder_point",  "description": "Reorder trigger threshold",         "data_type": "INTEGER" },
+        "snapshot_date":  { "name": "snapshot_date",  "description": "Date of inventory snapshot",        "data_type": "DATE" }
+      }
+    },
+
+    "model.ecommerce_dw.int_orders_enriched": {
+      "unique_id": "model.ecommerce_dw.int_orders_enriched",
+      "name": "int_orders_enriched",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "intermediate/int_orders_enriched.sql",
+      "original_file_path": "models/intermediate/int_orders_enriched.sql",
+      "fqn": ["ecommerce_dw", "intermediate", "int_orders_enriched"],
+      "schema": "intermediate",
+      "database": "ANALYTICS",
+      "alias": "int_orders_enriched",
+      "description": "Orders joined with customer and payment data. Calculates order-level metrics and flags.",
+      "tags": ["intermediate", "orders", "daily"],
+      "config": { "materialized": "ephemeral", "schema": "intermediate" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.stg_orders",
+          "model.ecommerce_dw.stg_customers",
+          "model.ecommerce_dw.stg_payments"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "stg_orders",    "package": null },
+        { "name": "stg_customers", "package": null },
+        { "name": "stg_payments",  "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "order_id":           { "name": "order_id",           "description": "Unique order ID",                    "data_type": "VARCHAR" },
+        "customer_id":        { "name": "customer_id",        "description": "FK to customers",                    "data_type": "VARCHAR" },
+        "customer_segment":   { "name": "customer_segment",   "description": "Customer segment at order time",     "data_type": "VARCHAR" },
+        "order_date":         { "name": "order_date",         "description": "Date order placed",                  "data_type": "DATE" },
+        "order_status":       { "name": "order_status",       "description": "Current order status",               "data_type": "VARCHAR" },
+        "total_amount":       { "name": "total_amount",       "description": "Total order value",                  "data_type": "NUMERIC" },
+        "payment_status":     { "name": "payment_status",     "description": "Payment status",                     "data_type": "VARCHAR" },
+        "payment_method":     { "name": "payment_method",     "description": "Payment method used",                "data_type": "VARCHAR" },
+        "is_paid":            { "name": "is_paid",            "description": "Whether order has been paid",        "data_type": "BOOLEAN" },
+        "is_first_order":     { "name": "is_first_order",     "description": "Whether this is customers first order","data_type": "BOOLEAN" },
+        "days_to_deliver":    { "name": "days_to_deliver",    "description": "Days between order and delivery",    "data_type": "INTEGER" }
+      }
+    },
+
+    "model.ecommerce_dw.int_order_items_enriched": {
+      "unique_id": "model.ecommerce_dw.int_order_items_enriched",
+      "name": "int_order_items_enriched",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "intermediate/int_order_items_enriched.sql",
+      "original_file_path": "models/intermediate/int_order_items_enriched.sql",
+      "fqn": ["ecommerce_dw", "intermediate", "int_order_items_enriched"],
+      "schema": "intermediate",
+      "database": "ANALYTICS",
+      "alias": "int_order_items_enriched",
+      "description": "Order items joined with product data, calculates margin and contribution metrics.",
+      "tags": ["intermediate", "orders", "products", "daily"],
+      "config": { "materialized": "ephemeral", "schema": "intermediate" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.stg_order_items",
+          "model.ecommerce_dw.stg_products",
+          "model.ecommerce_dw.stg_orders"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "stg_order_items", "package": null },
+        { "name": "stg_products",    "package": null },
+        { "name": "stg_orders",      "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "order_item_id":      { "name": "order_item_id",      "description": "Unique order item ID",              "data_type": "VARCHAR" },
+        "order_id":           { "name": "order_id",           "description": "FK to orders",                      "data_type": "VARCHAR" },
+        "product_id":         { "name": "product_id",         "description": "FK to products",                    "data_type": "VARCHAR" },
+        "product_name":       { "name": "product_name",       "description": "Product name at time of order",     "data_type": "VARCHAR" },
+        "category":           { "name": "category",           "description": "Product category",                  "data_type": "VARCHAR" },
+        "quantity":           { "name": "quantity",           "description": "Units ordered",                     "data_type": "INTEGER" },
+        "unit_price":         { "name": "unit_price",         "description": "Selling price per unit",            "data_type": "NUMERIC" },
+        "unit_cost":          { "name": "unit_cost",          "description": "COGS per unit",                     "data_type": "NUMERIC" },
+        "line_total":         { "name": "line_total",         "description": "Total line revenue",                "data_type": "NUMERIC" },
+        "line_margin":        { "name": "line_margin",        "description": "Gross margin for line item",        "data_type": "NUMERIC" },
+        "margin_pct":         { "name": "margin_pct",         "description": "Gross margin percentage",           "data_type": "NUMERIC" }
+      }
+    },
+
+    "model.ecommerce_dw.int_customer_orders": {
+      "unique_id": "model.ecommerce_dw.int_customer_orders",
+      "name": "int_customer_orders",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "intermediate/int_customer_orders.sql",
+      "original_file_path": "models/intermediate/int_customer_orders.sql",
+      "fqn": ["ecommerce_dw", "intermediate", "int_customer_orders"],
+      "schema": "intermediate",
+      "database": "ANALYTICS",
+      "alias": "int_customer_orders",
+      "description": "Customer-level order aggregations used to compute lifetime value and purchase frequency.",
+      "tags": ["intermediate", "customers", "daily"],
+      "config": { "materialized": "ephemeral", "schema": "intermediate" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.stg_customers",
+          "model.ecommerce_dw.int_orders_enriched"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "stg_customers",       "package": null },
+        { "name": "int_orders_enriched", "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "customer_id":        { "name": "customer_id",        "description": "Unique customer ID",                "data_type": "VARCHAR" },
+        "first_order_date":   { "name": "first_order_date",   "description": "Date of first order",              "data_type": "DATE" },
+        "last_order_date":    { "name": "last_order_date",    "description": "Date of most recent order",        "data_type": "DATE" },
+        "total_orders":       { "name": "total_orders",       "description": "Lifetime order count",             "data_type": "INTEGER" },
+        "total_revenue":      { "name": "total_revenue",      "description": "Lifetime revenue from customer",   "data_type": "NUMERIC" },
+        "avg_order_value":    { "name": "avg_order_value",    "description": "Average order value",              "data_type": "NUMERIC" },
+        "days_since_last_order":{ "name": "days_since_last_order","description": "Recency in days",              "data_type": "INTEGER" }
+      }
+    },
+
+    "model.ecommerce_dw.int_product_inventory": {
+      "unique_id": "model.ecommerce_dw.int_product_inventory",
+      "name": "int_product_inventory",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "intermediate/int_product_inventory.sql",
+      "original_file_path": "models/intermediate/int_product_inventory.sql",
+      "fqn": ["ecommerce_dw", "intermediate", "int_product_inventory"],
+      "schema": "intermediate",
+      "database": "ANALYTICS",
+      "alias": "int_product_inventory",
+      "description": "Products joined with latest inventory snapshots across all warehouses.",
+      "tags": ["intermediate", "products", "inventory", "daily"],
+      "config": { "materialized": "ephemeral", "schema": "intermediate" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.stg_products",
+          "model.ecommerce_dw.stg_inventory"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "stg_products",   "package": null },
+        { "name": "stg_inventory",  "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "product_id":         { "name": "product_id",         "description": "Unique product ID",                 "data_type": "VARCHAR" },
+        "product_name":       { "name": "product_name",       "description": "Product name",                      "data_type": "VARCHAR" },
+        "total_on_hand":      { "name": "total_on_hand",      "description": "Total units across all warehouses", "data_type": "INTEGER" },
+        "is_low_stock":       { "name": "is_low_stock",       "description": "Below reorder threshold flag",      "data_type": "BOOLEAN" },
+        "is_out_of_stock":    { "name": "is_out_of_stock",    "description": "Zero inventory flag",               "data_type": "BOOLEAN" },
+        "warehouse_count":    { "name": "warehouse_count",    "description": "Number of warehouses stocking item","data_type": "INTEGER" }
+      }
+    },
+
+    "model.ecommerce_dw.dim_customers": {
+      "unique_id": "model.ecommerce_dw.dim_customers",
+      "name": "dim_customers",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "marts/core/dim_customers.sql",
+      "original_file_path": "models/marts/core/dim_customers.sql",
+      "fqn": ["ecommerce_dw", "marts", "core", "dim_customers"],
+      "schema": "marts",
+      "database": "ANALYTICS",
+      "alias": "dim_customers",
+      "description": "Customer dimension table with lifetime value metrics, RFM scores and segmentation. SCD Type 2.",
+      "tags": ["mart", "core", "customers", "daily"],
+      "config": { "materialized": "table", "schema": "marts", "unique_key": "customer_id" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.stg_customers",
+          "model.ecommerce_dw.int_customer_orders"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "stg_customers",      "package": null },
+        { "name": "int_customer_orders", "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "customer_key":       { "name": "customer_key",       "description": "Surrogate key (SCD2)",              "data_type": "VARCHAR" },
+        "customer_id":        { "name": "customer_id",        "description": "Natural customer ID",               "data_type": "VARCHAR" },
+        "full_name":          { "name": "full_name",          "description": "Customer full name",                "data_type": "VARCHAR" },
+        "email":              { "name": "email",              "description": "Customer email",                    "data_type": "VARCHAR" },
+        "country_code":       { "name": "country_code",       "description": "Country code",                      "data_type": "VARCHAR" },
+        "customer_segment":   { "name": "customer_segment",   "description": "B2B/B2C/VIP",                       "data_type": "VARCHAR" },
+        "signup_date":        { "name": "signup_date",        "description": "Signup date",                       "data_type": "DATE" },
+        "lifetime_value":     { "name": "lifetime_value",     "description": "Total lifetime revenue",            "data_type": "NUMERIC" },
+        "total_orders":       { "name": "total_orders",       "description": "Lifetime order count",              "data_type": "INTEGER" },
+        "avg_order_value":    { "name": "avg_order_value",    "description": "Average order value",               "data_type": "NUMERIC" },
+        "rfm_score":          { "name": "rfm_score",          "description": "RFM combined score 1-5",            "data_type": "INTEGER" },
+        "customer_tier":      { "name": "customer_tier",      "description": "Bronze/Silver/Gold/Platinum",       "data_type": "VARCHAR" },
+        "is_active":          { "name": "is_active",          "description": "Active customer flag",              "data_type": "BOOLEAN" },
+        "dbt_valid_from":     { "name": "dbt_valid_from",     "description": "SCD2 valid from",                   "data_type": "TIMESTAMP" },
+        "dbt_valid_to":       { "name": "dbt_valid_to",       "description": "SCD2 valid to (null = current)",    "data_type": "TIMESTAMP" }
+      }
+    },
+
+    "model.ecommerce_dw.dim_products": {
+      "unique_id": "model.ecommerce_dw.dim_products",
+      "name": "dim_products",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "marts/core/dim_products.sql",
+      "original_file_path": "models/marts/core/dim_products.sql",
+      "fqn": ["ecommerce_dw", "marts", "core", "dim_products"],
+      "schema": "marts",
+      "database": "ANALYTICS",
+      "alias": "dim_products",
+      "description": "Product dimension with inventory status and profitability metrics.",
+      "tags": ["mart", "core", "products", "daily"],
+      "config": { "materialized": "table", "schema": "marts" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.stg_products",
+          "model.ecommerce_dw.int_product_inventory"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "stg_products",          "package": null },
+        { "name": "int_product_inventory", "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "product_key":        { "name": "product_key",        "description": "Surrogate key",                     "data_type": "VARCHAR" },
+        "product_id":         { "name": "product_id",         "description": "Natural product ID",                "data_type": "VARCHAR" },
+        "product_name":       { "name": "product_name",       "description": "Product name",                      "data_type": "VARCHAR" },
+        "sku":                { "name": "sku",                 "description": "SKU",                               "data_type": "VARCHAR" },
+        "category":           { "name": "category",           "description": "Product category",                  "data_type": "VARCHAR" },
+        "subcategory":        { "name": "subcategory",        "description": "Product subcategory",               "data_type": "VARCHAR" },
+        "brand":              { "name": "brand",              "description": "Brand",                             "data_type": "VARCHAR" },
+        "unit_cost":          { "name": "unit_cost",          "description": "Cost per unit",                     "data_type": "NUMERIC" },
+        "unit_price":         { "name": "unit_price",         "description": "Retail price",                      "data_type": "NUMERIC" },
+        "gross_margin_pct":   { "name": "gross_margin_pct",   "description": "Gross margin %",                    "data_type": "NUMERIC" },
+        "total_on_hand":      { "name": "total_on_hand",      "description": "Total inventory",                   "data_type": "INTEGER" },
+        "is_low_stock":       { "name": "is_low_stock",       "description": "Low stock flag",                    "data_type": "BOOLEAN" },
+        "is_active":          { "name": "is_active",          "description": "Active flag",                       "data_type": "BOOLEAN" }
+      }
+    },
+
+    "model.ecommerce_dw.dim_date": {
+      "unique_id": "model.ecommerce_dw.dim_date",
+      "name": "dim_date",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "marts/core/dim_date.sql",
+      "original_file_path": "models/marts/core/dim_date.sql",
+      "fqn": ["ecommerce_dw", "marts", "core", "dim_date"],
+      "schema": "marts",
+      "database": "ANALYTICS",
+      "alias": "dim_date",
+      "description": "Date dimension spanning 2020-2030 with fiscal calendar, week numbers and holiday flags.",
+      "tags": ["mart", "core", "date"],
+      "config": { "materialized": "table", "schema": "marts" },
+      "depends_on": { "nodes": [], "macros": [] },
+      "refs": [],
+      "sources": [],
+      "columns": {
+        "date_key":           { "name": "date_key",           "description": "Date surrogate key YYYYMMDD",       "data_type": "INTEGER" },
+        "date":               { "name": "date",               "description": "Calendar date",                     "data_type": "DATE" },
+        "year":               { "name": "year",               "description": "Calendar year",                     "data_type": "INTEGER" },
+        "quarter":            { "name": "quarter",            "description": "Calendar quarter 1-4",              "data_type": "INTEGER" },
+        "month":              { "name": "month",              "description": "Month number 1-12",                 "data_type": "INTEGER" },
+        "month_name":         { "name": "month_name",         "description": "Month name",                        "data_type": "VARCHAR" },
+        "week_of_year":       { "name": "week_of_year",       "description": "ISO week number",                   "data_type": "INTEGER" },
+        "day_of_week":        { "name": "day_of_week",        "description": "Day number 1=Mon",                  "data_type": "INTEGER" },
+        "is_weekend":         { "name": "is_weekend",         "description": "Weekend flag",                      "data_type": "BOOLEAN" },
+        "is_holiday":         { "name": "is_holiday",         "description": "Public holiday flag",               "data_type": "BOOLEAN" },
+        "fiscal_year":        { "name": "fiscal_year",        "description": "Fiscal year (Apr start)",           "data_type": "INTEGER" },
+        "fiscal_quarter":     { "name": "fiscal_quarter",     "description": "Fiscal quarter",                    "data_type": "INTEGER" }
+      }
+    },
+
+    "model.ecommerce_dw.fct_orders": {
+      "unique_id": "model.ecommerce_dw.fct_orders",
+      "name": "fct_orders",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "marts/core/fct_orders.sql",
+      "original_file_path": "models/marts/core/fct_orders.sql",
+      "fqn": ["ecommerce_dw", "marts", "core", "fct_orders"],
+      "schema": "marts",
+      "database": "ANALYTICS",
+      "alias": "fct_orders",
+      "description": "Core orders fact table. One row per order. Primary fact table for revenue reporting.",
+      "tags": ["mart", "core", "orders", "daily"],
+      "config": { "materialized": "incremental", "schema": "marts", "unique_key": "order_id", "incremental_strategy": "merge" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.int_orders_enriched",
+          "model.ecommerce_dw.dim_customers",
+          "model.ecommerce_dw.dim_date"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "int_orders_enriched", "package": null },
+        { "name": "dim_customers",       "package": null },
+        { "name": "dim_date",            "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "order_id":           { "name": "order_id",           "description": "Natural order ID",                  "data_type": "VARCHAR" },
+        "customer_key":       { "name": "customer_key",       "description": "FK to dim_customers",               "data_type": "VARCHAR" },
+        "date_key":           { "name": "date_key",           "description": "FK to dim_date",                    "data_type": "INTEGER" },
+        "order_status":       { "name": "order_status",       "description": "Order status",                      "data_type": "VARCHAR" },
+        "channel":            { "name": "channel",            "description": "Sales channel",                     "data_type": "VARCHAR" },
+        "total_amount":       { "name": "total_amount",       "description": "Order total revenue",               "data_type": "NUMERIC" },
+        "payment_method":     { "name": "payment_method",     "description": "Payment method",                    "data_type": "VARCHAR" },
+        "is_paid":            { "name": "is_paid",            "description": "Paid flag",                         "data_type": "BOOLEAN" },
+        "is_first_order":     { "name": "is_first_order",     "description": "First order flag",                  "data_type": "BOOLEAN" },
+        "item_count":         { "name": "item_count",         "description": "Number of line items",              "data_type": "INTEGER" },
+        "days_to_deliver":    { "name": "days_to_deliver",    "description": "Delivery days",                     "data_type": "INTEGER" }
+      }
+    },
+
+    "model.ecommerce_dw.fct_order_items": {
+      "unique_id": "model.ecommerce_dw.fct_order_items",
+      "name": "fct_order_items",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "marts/core/fct_order_items.sql",
+      "original_file_path": "models/marts/core/fct_order_items.sql",
+      "fqn": ["ecommerce_dw", "marts", "core", "fct_order_items"],
+      "schema": "marts",
+      "database": "ANALYTICS",
+      "alias": "fct_order_items",
+      "description": "Order items fact table at line item grain. Used for product performance and margin analysis.",
+      "tags": ["mart", "core", "orders", "products", "daily"],
+      "config": { "materialized": "incremental", "schema": "marts", "unique_key": "order_item_id", "incremental_strategy": "merge" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.int_order_items_enriched",
+          "model.ecommerce_dw.dim_products",
+          "model.ecommerce_dw.dim_customers",
+          "model.ecommerce_dw.dim_date"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "int_order_items_enriched", "package": null },
+        { "name": "dim_products",             "package": null },
+        { "name": "dim_customers",            "package": null },
+        { "name": "dim_date",                 "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "order_item_id":      { "name": "order_item_id",      "description": "Natural order item ID",             "data_type": "VARCHAR" },
+        "order_id":           { "name": "order_id",           "description": "FK to fct_orders",                  "data_type": "VARCHAR" },
+        "product_key":        { "name": "product_key",        "description": "FK to dim_products",                "data_type": "VARCHAR" },
+        "customer_key":       { "name": "customer_key",       "description": "FK to dim_customers",               "data_type": "VARCHAR" },
+        "date_key":           { "name": "date_key",           "description": "FK to dim_date",                    "data_type": "INTEGER" },
+        "quantity":           { "name": "quantity",           "description": "Units ordered",                     "data_type": "INTEGER" },
+        "unit_price":         { "name": "unit_price",         "description": "Selling price",                     "data_type": "NUMERIC" },
+        "unit_cost":          { "name": "unit_cost",          "description": "Cost price",                        "data_type": "NUMERIC" },
+        "line_total":         { "name": "line_total",         "description": "Total revenue",                     "data_type": "NUMERIC" },
+        "line_margin":        { "name": "line_margin",        "description": "Gross margin",                      "data_type": "NUMERIC" },
+        "margin_pct":         { "name": "margin_pct",         "description": "Margin %",                          "data_type": "NUMERIC" }
+      }
+    },
+
+    "model.ecommerce_dw.fct_sessions": {
+      "unique_id": "model.ecommerce_dw.fct_sessions",
+      "name": "fct_sessions",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "marts/marketing/fct_sessions.sql",
+      "original_file_path": "models/marts/marketing/fct_sessions.sql",
+      "fqn": ["ecommerce_dw", "marts", "marketing", "fct_sessions"],
+      "schema": "marts",
+      "database": "ANALYTICS",
+      "alias": "fct_sessions",
+      "description": "Web and mobile sessions fact table. Used for funnel analysis and conversion reporting.",
+      "tags": ["mart", "marketing", "sessions", "hourly"],
+      "config": { "materialized": "incremental", "schema": "marts", "unique_key": "session_id" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.stg_sessions",
+          "model.ecommerce_dw.dim_customers",
+          "model.ecommerce_dw.dim_date"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "stg_sessions",  "package": null },
+        { "name": "dim_customers", "package": null },
+        { "name": "dim_date",      "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "session_id":         { "name": "session_id",         "description": "Unique session ID",                 "data_type": "VARCHAR" },
+        "customer_key":       { "name": "customer_key",       "description": "FK to dim_customers (nullable)",    "data_type": "VARCHAR" },
+        "date_key":           { "name": "date_key",           "description": "FK to dim_date",                    "data_type": "INTEGER" },
+        "channel":            { "name": "channel",            "description": "Acquisition channel",               "data_type": "VARCHAR" },
+        "device_type":        { "name": "device_type",        "description": "Device type",                       "data_type": "VARCHAR" },
+        "session_duration_sec":{ "name": "session_duration_sec","description": "Session length in seconds",       "data_type": "INTEGER" },
+        "page_views":         { "name": "page_views",         "description": "Pages viewed",                      "data_type": "INTEGER" },
+        "converted":          { "name": "converted",          "description": "Conversion flag",                   "data_type": "BOOLEAN" }
+      }
+    },
+
+    "model.ecommerce_dw.mart_customer_360": {
+      "unique_id": "model.ecommerce_dw.mart_customer_360",
+      "name": "mart_customer_360",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "marts/reporting/mart_customer_360.sql",
+      "original_file_path": "models/marts/reporting/mart_customer_360.sql",
+      "fqn": ["ecommerce_dw", "marts", "reporting", "mart_customer_360"],
+      "schema": "marts",
+      "database": "ANALYTICS",
+      "alias": "mart_customer_360",
+      "description": "Customer 360 reporting mart. Combines orders, sessions and inventory into a single customer view for CRM and BI tools.",
+      "tags": ["mart", "reporting", "customers", "weekly"],
+      "config": { "materialized": "table", "schema": "marts" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.dim_customers",
+          "model.ecommerce_dw.fct_orders",
+          "model.ecommerce_dw.fct_sessions"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "dim_customers", "package": null },
+        { "name": "fct_orders",    "package": null },
+        { "name": "fct_sessions",  "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "customer_id":        { "name": "customer_id",        "description": "Customer ID",                       "data_type": "VARCHAR" },
+        "customer_tier":      { "name": "customer_tier",      "description": "Tier classification",               "data_type": "VARCHAR" },
+        "lifetime_value":     { "name": "lifetime_value",     "description": "LTV",                               "data_type": "NUMERIC" },
+        "total_orders":       { "name": "total_orders",       "description": "Order count",                       "data_type": "INTEGER" },
+        "total_sessions":     { "name": "total_sessions",     "description": "Session count",                     "data_type": "INTEGER" },
+        "conversion_rate":    { "name": "conversion_rate",    "description": "Session to order rate",             "data_type": "NUMERIC" },
+        "avg_order_value":    { "name": "avg_order_value",    "description": "AOV",                               "data_type": "NUMERIC" },
+        "last_order_date":    { "name": "last_order_date",    "description": "Most recent order date",            "data_type": "DATE" },
+        "preferred_channel":  { "name": "preferred_channel",  "description": "Most used channel",                 "data_type": "VARCHAR" },
+        "churn_risk_score":   { "name": "churn_risk_score",   "description": "Churn risk 0-100",                  "data_type": "NUMERIC" }
+      }
+    },
+
+    "model.ecommerce_dw.mart_product_performance": {
+      "unique_id": "model.ecommerce_dw.mart_product_performance",
+      "name": "mart_product_performance",
+      "resource_type": "model",
+      "package_name": "ecommerce_dw",
+      "path": "marts/reporting/mart_product_performance.sql",
+      "original_file_path": "models/marts/reporting/mart_product_performance.sql",
+      "fqn": ["ecommerce_dw", "marts", "reporting", "mart_product_performance"],
+      "schema": "marts",
+      "database": "ANALYTICS",
+      "alias": "mart_product_performance",
+      "description": "Product performance reporting mart. Revenue, margin, inventory and velocity metrics per product for BI dashboards.",
+      "tags": ["mart", "reporting", "products", "daily"],
+      "config": { "materialized": "table", "schema": "marts" },
+      "depends_on": {
+        "nodes": [
+          "model.ecommerce_dw.dim_products",
+          "model.ecommerce_dw.fct_order_items"
+        ],
+        "macros": []
+      },
+      "refs": [
+        { "name": "dim_products",    "package": null },
+        { "name": "fct_order_items", "package": null }
+      ],
+      "sources": [],
+      "columns": {
+        "product_id":         { "name": "product_id",         "description": "Product ID",                        "data_type": "VARCHAR" },
+        "product_name":       { "name": "product_name",       "description": "Product name",                      "data_type": "VARCHAR" },
+        "category":           { "name": "category",           "description": "Category",                          "data_type": "VARCHAR" },
+        "total_revenue":      { "name": "total_revenue",      "description": "Total revenue",                     "data_type": "NUMERIC" },
+        "total_units_sold":   { "name": "total_units_sold",   "description": "Units sold",                        "data_type": "INTEGER" },
+        "total_margin":       { "name": "total_margin",       "description": "Total gross margin",                "data_type": "NUMERIC" },
+        "avg_margin_pct":     { "name": "avg_margin_pct",     "description": "Average margin %",                  "data_type": "NUMERIC" },
+        "total_on_hand":      { "name": "total_on_hand",      "description": "Current inventory",                 "data_type": "INTEGER" },
+        "weeks_of_supply":    { "name": "weeks_of_supply",    "description": "Inventory weeks of supply",         "data_type": "NUMERIC" },
+        "is_top_seller":      { "name": "is_top_seller",      "description": "Top 20% by revenue flag",           "data_type": "BOOLEAN" }
+      }
+    }
+  },
+
+  "sources": {
+    "source.ecommerce_dw.ecommerce_db.raw_orders": {
+      "unique_id": "source.ecommerce_dw.ecommerce_db.raw_orders",
+      "name": "raw_orders",
+      "source_name": "ecommerce_db",
+      "resource_type": "source",
+      "schema": "raw",
+      "database": "RAW",
+      "description": "Raw orders table from the ecommerce transactional database (Postgres replica)",
+      "tags": ["source", "ecommerce"],
+      "loader": "fivetran",
+      "columns": {
+        "id":         { "name": "id",         "description": "Primary key" },
+        "customer_id":{ "name": "customer_id","description": "Customer reference" },
+        "created_at": { "name": "created_at", "description": "Order creation timestamp" },
+        "status":     { "name": "status",     "description": "Raw status code" },
+        "total":      { "name": "total",      "description": "Raw order total" }
+      }
+    },
+    "source.ecommerce_dw.ecommerce_db.raw_customers": {
+      "unique_id": "source.ecommerce_dw.ecommerce_db.raw_customers",
+      "name": "raw_customers",
+      "source_name": "ecommerce_db",
+      "resource_type": "source",
+      "schema": "raw",
+      "database": "RAW",
+      "description": "Raw customers from CRM system loaded via Fivetran",
+      "tags": ["source", "ecommerce"],
+      "loader": "fivetran",
+      "columns": {}
+    },
+    "source.ecommerce_dw.ecommerce_db.raw_products": {
+      "unique_id": "source.ecommerce_dw.ecommerce_db.raw_products",
+      "name": "raw_products",
+      "source_name": "ecommerce_db",
+      "resource_type": "source",
+      "schema": "raw",
+      "database": "RAW",
+      "description": "Raw product catalog from PIM system",
+      "tags": ["source", "ecommerce"],
+      "loader": "fivetran",
+      "columns": {}
+    },
+    "source.ecommerce_dw.ecommerce_db.raw_order_items": {
+      "unique_id": "source.ecommerce_dw.ecommerce_db.raw_order_items",
+      "name": "raw_order_items",
+      "source_name": "ecommerce_db",
+      "resource_type": "source",
+      "schema": "raw",
+      "database": "RAW",
+      "description": "Raw order line items",
+      "tags": ["source", "ecommerce"],
+      "loader": "fivetran",
+      "columns": {}
+    },
+    "source.ecommerce_dw.payments_db.raw_payments": {
+      "unique_id": "source.ecommerce_dw.payments_db.raw_payments",
+      "name": "raw_payments",
+      "source_name": "payments_db",
+      "resource_type": "source",
+      "schema": "raw",
+      "database": "RAW",
+      "description": "Raw payment transactions from Stripe via Fivetran",
+      "tags": ["source", "payments"],
+      "loader": "fivetran",
+      "columns": {}
+    },
+    "source.ecommerce_dw.event_db.raw_sessions": {
+      "unique_id": "source.ecommerce_dw.event_db.raw_sessions",
+      "name": "raw_sessions",
+      "source_name": "event_db",
+      "resource_type": "source",
+      "schema": "raw",
+      "database": "RAW",
+      "description": "Raw session events from Segment CDP",
+      "tags": ["source", "analytics"],
+      "loader": "segment",
+      "columns": {}
+    },
+    "source.ecommerce_dw.warehouse_db.raw_inventory": {
+      "unique_id": "source.ecommerce_dw.warehouse_db.raw_inventory",
+      "name": "raw_inventory",
+      "source_name": "warehouse_db",
+      "resource_type": "source",
+      "schema": "raw",
+      "database": "RAW",
+      "description": "Raw daily inventory snapshots from the WMS system",
+      "tags": ["source", "warehouse"],
+      "loader": "custom_python",
+      "columns": {}
+    }
+  },
+
+  "parent_map": {
+    "model.ecommerce_dw.stg_orders":                   ["source.ecommerce_dw.ecommerce_db.raw_orders"],
+    "model.ecommerce_dw.stg_customers":                ["source.ecommerce_dw.ecommerce_db.raw_customers"],
+    "model.ecommerce_dw.stg_products":                 ["source.ecommerce_dw.ecommerce_db.raw_products"],
+    "model.ecommerce_dw.stg_order_items":              ["source.ecommerce_dw.ecommerce_db.raw_order_items"],
+    "model.ecommerce_dw.stg_payments":                 ["source.ecommerce_dw.payments_db.raw_payments"],
+    "model.ecommerce_dw.stg_sessions":                 ["source.ecommerce_dw.event_db.raw_sessions"],
+    "model.ecommerce_dw.stg_inventory":                ["source.ecommerce_dw.warehouse_db.raw_inventory"],
+    "model.ecommerce_dw.int_orders_enriched":          ["model.ecommerce_dw.stg_orders","model.ecommerce_dw.stg_customers","model.ecommerce_dw.stg_payments"],
+    "model.ecommerce_dw.int_order_items_enriched":     ["model.ecommerce_dw.stg_order_items","model.ecommerce_dw.stg_products","model.ecommerce_dw.stg_orders"],
+    "model.ecommerce_dw.int_customer_orders":          ["model.ecommerce_dw.stg_customers","model.ecommerce_dw.int_orders_enriched"],
+    "model.ecommerce_dw.int_product_inventory":        ["model.ecommerce_dw.stg_products","model.ecommerce_dw.stg_inventory"],
+    "model.ecommerce_dw.dim_customers":                ["model.ecommerce_dw.stg_customers","model.ecommerce_dw.int_customer_orders"],
+    "model.ecommerce_dw.dim_products":                 ["model.ecommerce_dw.stg_products","model.ecommerce_dw.int_product_inventory"],
+    "model.ecommerce_dw.dim_date":                     [],
+    "model.ecommerce_dw.fct_orders":                   ["model.ecommerce_dw.int_orders_enriched","model.ecommerce_dw.dim_customers","model.ecommerce_dw.dim_date"],
+    "model.ecommerce_dw.fct_order_items":              ["model.ecommerce_dw.int_order_items_enriched","model.ecommerce_dw.dim_products","model.ecommerce_dw.dim_customers","model.ecommerce_dw.dim_date"],
+    "model.ecommerce_dw.fct_sessions":                 ["model.ecommerce_dw.stg_sessions","model.ecommerce_dw.dim_customers","model.ecommerce_dw.dim_date"],
+    "model.ecommerce_dw.mart_customer_360":            ["model.ecommerce_dw.dim_customers","model.ecommerce_dw.fct_orders","model.ecommerce_dw.fct_sessions"],
+    "model.ecommerce_dw.mart_product_performance":     ["model.ecommerce_dw.dim_products","model.ecommerce_dw.fct_order_items"]
+  },
+
+  "child_map": {
+    "source.ecommerce_dw.ecommerce_db.raw_orders":     ["model.ecommerce_dw.stg_orders"],
+    "source.ecommerce_dw.ecommerce_db.raw_customers":  ["model.ecommerce_dw.stg_customers"],
+    "source.ecommerce_dw.ecommerce_db.raw_products":   ["model.ecommerce_dw.stg_products"],
+    "source.ecommerce_dw.ecommerce_db.raw_order_items":["model.ecommerce_dw.stg_order_items"],
+    "source.ecommerce_dw.payments_db.raw_payments":    ["model.ecommerce_dw.stg_payments"],
+    "source.ecommerce_dw.event_db.raw_sessions":       ["model.ecommerce_dw.stg_sessions"],
+    "source.ecommerce_dw.warehouse_db.raw_inventory":  ["model.ecommerce_dw.stg_inventory"],
+    "model.ecommerce_dw.stg_orders":                   ["model.ecommerce_dw.int_orders_enriched","model.ecommerce_dw.int_order_items_enriched"],
+    "model.ecommerce_dw.stg_customers":                ["model.ecommerce_dw.int_orders_enriched","model.ecommerce_dw.int_customer_orders"],
+    "model.ecommerce_dw.stg_products":                 ["model.ecommerce_dw.int_order_items_enriched","model.ecommerce_dw.int_product_inventory"],
+    "model.ecommerce_dw.stg_order_items":              ["model.ecommerce_dw.int_order_items_enriched"],
+    "model.ecommerce_dw.stg_payments":                 ["model.ecommerce_dw.int_orders_enriched"],
+    "model.ecommerce_dw.stg_sessions":                 ["model.ecommerce_dw.fct_sessions"],
+    "model.ecommerce_dw.stg_inventory":                ["model.ecommerce_dw.int_product_inventory"],
+    "model.ecommerce_dw.int_orders_enriched":          ["model.ecommerce_dw.dim_customers","model.ecommerce_dw.fct_orders"],
+    "model.ecommerce_dw.int_order_items_enriched":     ["model.ecommerce_dw.fct_order_items"],
+    "model.ecommerce_dw.int_customer_orders":          ["model.ecommerce_dw.dim_customers"],
+    "model.ecommerce_dw.int_product_inventory":        ["model.ecommerce_dw.dim_products"],
+    "model.ecommerce_dw.dim_customers":                ["model.ecommerce_dw.fct_orders","model.ecommerce_dw.fct_order_items","model.ecommerce_dw.fct_sessions","model.ecommerce_dw.mart_customer_360"],
+    "model.ecommerce_dw.dim_products":                 ["model.ecommerce_dw.fct_order_items","model.ecommerce_dw.mart_product_performance"],
+    "model.ecommerce_dw.dim_date":                     ["model.ecommerce_dw.fct_orders","model.ecommerce_dw.fct_order_items","model.ecommerce_dw.fct_sessions"],
+    "model.ecommerce_dw.fct_orders":                   ["model.ecommerce_dw.mart_customer_360"],
+    "model.ecommerce_dw.fct_order_items":              ["model.ecommerce_dw.mart_product_performance"],
+    "model.ecommerce_dw.fct_sessions":                 ["model.ecommerce_dw.mart_customer_360"],
+    "model.ecommerce_dw.mart_customer_360":            [],
+    "model.ecommerce_dw.mart_product_performance":     []
+  }
+}

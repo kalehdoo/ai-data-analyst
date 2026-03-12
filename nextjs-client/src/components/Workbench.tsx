@@ -8,8 +8,9 @@ import PromptRunner from "./PromptRunner";
 import ToolsPanel from "./ToolsPanel";
 import Chat from "./Chat";
 import DataLineage from "./DataLineage";
+import ETLLineage from "./ETLLineage";
 
-type Tab = "schemas" | "query" | "tools" | "prompts" | "chat" | "datamodel";
+type Tab = "schemas" | "query" | "tools" | "prompts" | "chat" | "datamodel" | "etl";
 
 export default function Workbench() {
   const { user, logout } = useAuth();
@@ -31,6 +32,7 @@ export default function Workbench() {
     { id: "tools",   label: "Analysis Tools",  icon: "⚙", roles: ["Admin", "Analyst"] },
     { id: "prompts", label: "AI Prompts",       icon: "✦", roles: ["Admin", "Analyst"] },
     { id: "chat", label: "Data Chat", icon: "💬", roles: ["Admin", "Analyst"] },
+    { id: "etl", label: "ETL Lineage", icon: "⬡", roles: ["Admin", "Analyst", "Viewer"] },
   ];
 
   const tabs = allTabs.filter((t) => t.roles.includes(user?.role || ""));
@@ -94,6 +96,7 @@ export default function Workbench() {
   <>
     {tab === "schemas" && <SchemaExplorer />}
     {tab === "datamodel" && <DataLineage />}
+    {tab === "etl" && <ETLLineage />}
     {tab === "query"   && <QueryRunner />}
     {tab === "tools"   && <ToolsPanel />}
     {tab === "prompts" && <PromptRunner />}

@@ -5,8 +5,30 @@ import { Database } from "@sqlitecloud/drivers";
 import { z } from "zod";
 import dotenv from "dotenv";
 import http from "http";
+import { readFileSync, existsSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Load dbt manifest
+let dbtManifest = null;
+const manifestPath = join(__dirname, "../data/manifest.json");
+if (existsSync(manifestPath)) {
+  try {
+    dbtManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    console.log("✓ dbt manifest loaded:", Object.keys(dbtManifest.nodes || {}).length, "models");
+  } catch (e) {
+    console.warn("⚠ Could not load manifest.json:", e.message);
+  }
+}
+
+function requireManifest() {
+  if (!dbtManifest) throw new Error("manifest.json not found in mcp-server/data/. Please add it.");
+  return dbtManifest;
+}
 
 // ─── Database Connection ─────────────────────────────────────────────────────
 function getDb() {
@@ -137,6 +159,286 @@ function setupServer(server) {
   // ════════════════════════════════════════════════════════════════════════════
   //  TOOLS
   // ════════════════════════════════════════════════════════════════════════════
+
+  // ── dbt Manifest Tools ──────────────────────────────────────────────────────
+
+server.tool(
+  "dbt_get_model",
+  "Get full details of a dbt model including columns, description, materialization and file path",
+  {
+    model_name: { type: "string", description: "Name of the dbt model e.g. stg_orders, fct_orders" },
+  },
+  async ({ model_name }) => {
+    const manifest = requireManifest();
+    const allNodes = { ...manifest.nodes, ...manifest.sources };
+
+    // Find by name (flexible match)
+    const entry = Object.values(allNodes).find(
+      (n) => n.name === model_name || n.unique_id.endsWith(model_name)
+    );
+
+    if (!entry) {
+      const available = Object.values(allNodes).map((n) => n.name).join(", ");
+      throw new Error(`Model "${model_name}" not found. Available: ${available}`);
+    }
+
+    const result = {
+      name: entry.name,
+      unique_id: entry.unique_id,
+      resource_type: entry.resource_type,
+      layer: entry.name.startsWith("stg_") ? "staging"
+           : entry.name.startsWith("int_") ? "intermediate"
+           : entry.resource_type === "source" ? "source"
+           : "mart",
+      schema: entry.schema,
+      database: entry.database,
+      materialized: entry.config?.materialized || "external",
+      description: entry.description || "No description",
+      path: entry.path || entry.original_file_path,
+      tags: entry.tags || [],
+      columns: Object.values(entry.columns || {}).map((c) => ({
+        name: c.name,
+        data_type: c.data_type || "unknown",
+        description: c.description || "No description",
+      })),
+      column_count: Object.keys(entry.columns || {}).length,
+    };
+
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.tool(
+  "dbt_get_lineage",
+  "Get the upstream (parents) and downstream (children) lineage for a dbt model",
+  {
+    model_name: { type: "string", description: "Name of the dbt model" },
+    depth: { type: "number", description: "How many levels to traverse (default 1, max 5)" },
+  },
+  async ({ model_name, depth = 1 }) => {
+    const manifest = requireManifest();
+    const maxDepth = Math.min(depth, 5);
+
+    // Find the node
+    const allNodes = { ...manifest.nodes, ...manifest.sources };
+    const entry = Object.values(allNodes).find((n) => n.name === model_name);
+    if (!entry) throw new Error(`Model "${model_name}" not found`);
+
+    const nodeId = entry.unique_id;
+
+    // Walk upstream
+    function getUpstream(id, currentDepth) {
+      if (currentDepth > maxDepth) return [];
+      const parents = manifest.parent_map[id] || [];
+      return parents.map((pid) => {
+        const pNode = allNodes[pid];
+        if (!pNode) return null;
+        return {
+          name: pNode.name,
+          layer: pNode.name.startsWith("stg_") ? "staging"
+               : pNode.name.startsWith("int_") ? "intermediate"
+               : pNode.resource_type === "source" ? "source" : "mart",
+          materialized: pNode.config?.materialized || "external",
+          description: pNode.description || "",
+          depth: currentDepth,
+          parents: getUpstream(pid, currentDepth + 1),
+        };
+      }).filter(Boolean);
+    }
+
+    // Walk downstream
+    function getDownstream(id, currentDepth) {
+      if (currentDepth > maxDepth) return [];
+      const children = manifest.child_map[id] || [];
+      return children.map((cid) => {
+        const cNode = allNodes[cid];
+        if (!cNode) return null;
+        return {
+          name: cNode.name,
+          layer: cNode.name.startsWith("stg_") ? "staging"
+               : cNode.name.startsWith("int_") ? "intermediate"
+               : cNode.resource_type === "source" ? "source" : "mart",
+          materialized: cNode.config?.materialized || "external",
+          description: cNode.description || "",
+          depth: currentDepth,
+          children: getDownstream(cid, currentDepth + 1),
+        };
+      }).filter(Boolean);
+    }
+
+    const result = {
+      model: model_name,
+      layer: entry.name.startsWith("stg_") ? "staging"
+           : entry.name.startsWith("int_") ? "intermediate"
+           : entry.resource_type === "source" ? "source" : "mart",
+      description: entry.description || "",
+      upstream: getUpstream(nodeId, 1),
+      downstream: getDownstream(nodeId, 1),
+      direct_parent_count: (manifest.parent_map[nodeId] || []).length,
+      direct_child_count: (manifest.child_map[nodeId] || []).length,
+    };
+
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.tool(
+  "dbt_search_column",
+  "Search for a column name across all dbt models — find which models contain a column",
+  {
+    column_name: { type: "string", description: "Column name to search for (partial match supported)" },
+  },
+  async ({ column_name }) => {
+    const manifest = requireManifest();
+    const allNodes = { ...manifest.nodes, ...manifest.sources };
+    const query = column_name.toLowerCase();
+
+    const matches = [];
+    Object.values(allNodes).forEach((node) => {
+      const matchingCols = Object.values(node.columns || {}).filter(
+        (c) => c.name.toLowerCase().includes(query) ||
+               (c.description || "").toLowerCase().includes(query)
+      );
+      if (matchingCols.length > 0) {
+        matches.push({
+          model: node.name,
+          layer: node.name.startsWith("stg_") ? "staging"
+               : node.name.startsWith("int_") ? "intermediate"
+               : node.resource_type === "source" ? "source" : "mart",
+          matching_columns: matchingCols.map((c) => ({
+            name: c.name,
+            data_type: c.data_type || "unknown",
+            description: c.description || "No description",
+          })),
+        });
+      }
+    });
+
+    matches.sort((a, b) => {
+      const order = { source: 0, staging: 1, intermediate: 2, mart: 3 };
+      return (order[a.layer] || 0) - (order[b.layer] || 0);
+    });
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          query: column_name,
+          total_models: matches.length,
+          results: matches,
+        }, null, 2),
+      }],
+    };
+  }
+);
+
+server.tool(
+  "dbt_list_models",
+  "List all dbt models grouped by layer with their materialization and description",
+  {
+    layer: { type: "string", description: "Filter by layer: source, staging, intermediate, mart, or all (default)" },
+  },
+  async ({ layer = "all" }) => {
+    const manifest = requireManifest();
+    const allNodes = { ...manifest.nodes, ...manifest.sources };
+
+    const getLayer = (node) => {
+      if (node.resource_type === "source") return "source";
+      if (node.name.startsWith("stg_")) return "staging";
+      if (node.name.startsWith("int_")) return "intermediate";
+      return "mart";
+    };
+
+    const grouped = { source: [], staging: [], intermediate: [], mart: [] };
+
+    Object.values(allNodes).forEach((node) => {
+      if (node.resource_type !== "model" && node.resource_type !== "source") return;
+      const nodeLayer = getLayer(node);
+      if (layer !== "all" && nodeLayer !== layer) return;
+      grouped[nodeLayer].push({
+        name: node.name,
+        materialized: node.config?.materialized || "external",
+        description: node.description || "No description",
+        column_count: Object.keys(node.columns || {}).length,
+        tags: node.tags || [],
+        path: node.path || "",
+      });
+    });
+
+    const result = {
+      project: manifest.metadata?.project_name,
+      dbt_version: manifest.metadata?.dbt_version,
+      generated_at: manifest.metadata?.generated_at,
+      total_models: Object.values(grouped).flat().length,
+      by_layer: grouped,
+    };
+
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.tool(
+  "dbt_impact_analysis",
+  "Analyze the impact of changing or removing a dbt model — shows all downstream models that would be affected",
+  {
+    model_name: { type: "string", description: "The model you plan to change or remove" },
+  },
+  async ({ model_name }) => {
+    const manifest = requireManifest();
+    const allNodes = { ...manifest.nodes, ...manifest.sources };
+
+    const entry = Object.values(allNodes).find((n) => n.name === model_name);
+    if (!entry) throw new Error(`Model "${model_name}" not found`);
+
+    // Get ALL downstream models recursively
+    const affected = new Map();
+    function walkDownstream(id, depth) {
+      const children = manifest.child_map[id] || [];
+      children.forEach((cid) => {
+        const cNode = allNodes[cid];
+        if (!cNode || affected.has(cid)) return;
+        const nodeLayer = cNode.name.startsWith("stg_") ? "staging"
+                        : cNode.name.startsWith("int_") ? "intermediate"
+                        : cNode.resource_type === "source" ? "source" : "mart";
+        affected.set(cid, {
+          name: cNode.name,
+          layer: nodeLayer,
+          materialized: cNode.config?.materialized || "external",
+          description: cNode.description || "",
+          hops_from_source: depth,
+        });
+        walkDownstream(cid, depth + 1);
+      });
+    }
+
+    walkDownstream(entry.unique_id, 1);
+
+    const affectedList = Array.from(affected.values())
+      .sort((a, b) => a.hops_from_source - b.hops_from_source);
+
+    // Group by layer
+    const byLayer = {};
+    affectedList.forEach((m) => {
+      if (!byLayer[m.layer]) byLayer[m.layer] = [];
+      byLayer[m.layer].push(m.name);
+    });
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          model: model_name,
+          description: entry.description || "",
+          total_affected: affectedList.length,
+          affected_by_layer: byLayer,
+          affected_models: affectedList,
+          risk_level: affectedList.length === 0 ? "LOW"
+                    : affectedList.length <= 3 ? "MEDIUM" : "HIGH",
+        }, null, 2),
+      }],
+    };
+  }
+);
 
   // Execute any read-only SQL
   server.tool(

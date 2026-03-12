@@ -254,9 +254,16 @@ while (true) {
                 key={opt.id}
                 onClick={() => setModel(opt.id)}
                 style={{
-                  ...s.modelBtn,
-                  ...(model === opt.id ? { background: opt.color, color: "#fff", borderColor: opt.color } : {}),
-                }}
+  ...s.modelBtn,
+  ...(model === opt.id ? {
+    background: opt.color,
+    color: "#fff",
+    borderTop: `1px solid ${opt.color}`,
+    borderRight: `1px solid ${opt.color}`,
+    borderBottom: `1px solid ${opt.color}`,
+    borderLeft: `1px solid ${opt.color}`,
+  } : {}),
+}}
               >
                 {opt.label}
               </button>
@@ -372,48 +379,28 @@ function MessageContent({
 const isToolCall = lang === "tool-call";
 const isToolResult = lang === "tool-result";
 
-          if (isToolCall) {
-  return (
-    <div key={i} style={{ ...cb.block, borderColor: "var(--amber)" }}>
-      <div style={{ ...cb.header, background: "var(--amber-dim)" }}>
-        <span style={{ ...cb.lang, color: "var(--amber)" }}>tool call</span>
-      </div>
-      <pre style={{ ...cb.code, color: "var(--amber)" }}>{code}</pre>
-    </div>
-  );
-}
+          return (
+            <div key={i} style={cb.block}>
+              <div style={cb.header}>
+                <span style={cb.lang}>{lang || "code"}</span>
+                {isSQL && (
+                  <button
+                    onClick={() => onRunSQL(code, messageId)}
+                    disabled={runningQuery === code}
+                    style={cb.runBtn}
+                  >
+                    {runningQuery === code ? "⟳ Running…" : "▶ Run Query"}
+                  </button>
+                )}
+              </div>
+              <pre style={cb.code}>{code}</pre>
 
-if (isToolResult) {
-  return (
-    <div key={i} style={{ ...cb.block, borderColor: "var(--green)" }}>
-      <div style={{ ...cb.header, background: "var(--green-dim)" }}>
-        <span style={{ ...cb.lang, color: "var(--green)" }}>tool result</span>
-      </div>
-      <pre style={{ ...cb.code, color: "var(--green)" }}>{code}</pre>
-    </div>
-  );
-}
-
-return (
-  <div key={i} style={cb.block}>
-    <div style={cb.header}>
-      <span style={cb.lang}>{lang || "code"}</span>
-      {isSQL && (
-        <button
-          onClick={() => onRunSQL(code, messageId)}
-          disabled={runningQuery === code}
-          style={cb.runBtn}
-        >
-          {runningQuery === code ? "⟳ Running…" : "▶ Run Query"}
-        </button>
-      )}
-    </div>
-    <pre style={cb.code}>{code}</pre>
-    {isSQL && queryResults?.[code] && (
-      <QueryResultTable result={queryResults[code]} />
-    )}
-  </div>
-);
+              {/* Show results if query was run */}
+              {isSQL && queryResults?.[code] && (
+                <QueryResultTable result={queryResults[code]} />
+              )}
+            </div>
+          );
         }
 
         // Render text with basic markdown
@@ -490,7 +477,7 @@ const s: Record<string, React.CSSProperties> = {
   sub: { color: "var(--text-secondary)", fontSize: 13 },
   headerRight: { display: "flex", alignItems: "center", gap: 12 },
   modelSelector: { display: "flex", gap: 6 },
-  modelBtn: { background: "var(--bg-elevated)", border: "1px solid var(--border-bright)", color: "var(--text-secondary)", padding: "5px 12px", borderRadius: 99, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-mono)", transition: "all 0.15s" },
+  modelBtn: { background: "var(--bg-elevated)", borderTop: "1px solid var(--border-bright)", borderRight: "1px solid var(--border-bright)", borderBottom: "1px solid var(--border-bright)", borderLeft: "1px solid var(--border-bright)", color: "var(--text-secondary)", padding: "5px 12px", borderRadius: 99, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-mono)", transition: "all 0.15s" },
   clearBtn: { background: "none", border: "1px solid var(--border-bright)", color: "var(--text-muted)", padding: "5px 12px", borderRadius: "var(--radius)", fontSize: 12, cursor: "pointer" },
   messages: { flex: 1, overflow: "auto", padding: "20px 28px", display: "flex", flexDirection: "column", gap: 16 },
   empty: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40, textAlign: "center" as const },

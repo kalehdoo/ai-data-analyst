@@ -138,12 +138,68 @@ const geminiTools: GeminiTool[] = [{
         type: "object" as const,
         properties: {
           table: { type: "string" as const, description: "Table name" },
-          dateColumn: { type: "string" as const, description: "Date column name" },
+          dateColumn: { type: "string" as const, description: "Date column" },
           valueColumn: { type: "string" as const, description: "Numeric column to aggregate" },
           aggregation: { type: "string" as const, description: "sum, avg, count, min, or max" },
           period: { type: "string" as const, description: "hour, day, week, month, or year" },
         },
         required: ["table", "dateColumn", "valueColumn"],
+      },
+    },
+    {
+      name: "dbt_list_models",
+      description: "List all dbt ETL pipeline models grouped by layer (source, staging, intermediate, mart)",
+      parameters: {
+        type: "object" as const,
+        properties: {
+          layer: { type: "string" as const, description: "Filter by layer: source, staging, intermediate, mart, or all" },
+        },
+        required: [],
+      },
+    },
+    {
+      name: "dbt_get_model",
+      description: "Get full details of a dbt model including all columns, descriptions and data types",
+      parameters: {
+        type: "object" as const,
+        properties: {
+          model_name: { type: "string" as const, description: "Name of the dbt model e.g. stg_orders, fct_orders" },
+        },
+        required: ["model_name"],
+      },
+    },
+    {
+      name: "dbt_get_lineage",
+      description: "Get upstream and downstream lineage for a dbt model — shows where data comes from and where it goes",
+      parameters: {
+        type: "object" as const,
+        properties: {
+          model_name: { type: "string" as const, description: "Name of the dbt model" },
+          depth: { type: "number" as const, description: "How many levels to traverse (default 1, max 5)" },
+        },
+        required: ["model_name"],
+      },
+    },
+    {
+      name: "dbt_search_column",
+      description: "Search for a column name across ALL dbt models and sources — use this when asked which tables or models have a specific column or field",
+      parameters: {
+        type: "object" as const,
+        properties: {
+          column_name: { type: "string" as const, description: "Column name to search for (partial match supported)" },
+        },
+        required: ["column_name"],
+      },
+    },
+    {
+      name: "dbt_impact_analysis",
+      description: "Analyze the full downstream impact of changing or removing a dbt model",
+      parameters: {
+        type: "object" as const,
+        properties: {
+          model_name: { type: "string" as const, description: "The model you plan to change or remove" },
+        },
+        required: ["model_name"],
       },
     },
   ],
@@ -244,6 +300,77 @@ const openaiTools: OpenAI.Chat.ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "dbt_list_models",
+      description: "List all dbt ETL pipeline models grouped by layer (source, staging, intermediate, mart)",
+      parameters: {
+        type: "object",
+        properties: {
+          layer: { type: "string", description: "Filter by layer: source, staging, intermediate, mart, or all" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "dbt_get_model",
+      description: "Get full details of a dbt model including all columns, descriptions and data types",
+      parameters: {
+        type: "object",
+        properties: {
+          model_name: { type: "string", description: "Name of the dbt model e.g. stg_orders, fct_orders" },
+        },
+        required: ["model_name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "dbt_get_lineage",
+      description: "Get upstream and downstream lineage for a dbt model — shows where data comes from and where it goes",
+      parameters: {
+        type: "object",
+        properties: {
+          model_name: { type: "string", description: "Name of the dbt model" },
+          depth: { type: "number", description: "How many levels to traverse (default 1, max 5)" },
+        },
+        required: ["model_name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "dbt_search_column",
+      description: "Search for a column name across ALL dbt models and sources — use this when asked which tables or models have a specific column or field",
+      parameters: {
+        type: "object",
+        properties: {
+          column_name: { type: "string", description: "Column name to search for (partial match supported)" },
+        },
+        required: ["column_name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "dbt_impact_analysis",
+      description: "Analyze the full downstream impact of changing or removing a dbt model",
+      parameters: {
+        type: "object",
+        properties: {
+          model_name: { type: "string", description: "The model you plan to change or remove" },
+        },
+        required: ["model_name"],
+      },
+    },
+  },
 ];
 
 // Tool definitions for Claude
@@ -323,20 +450,87 @@ const claudeTools: Anthropic.Tool[] = [
       required: ["table", "dateColumn", "valueColumn"],
     },
   },
+  {
+    name: "dbt_list_models",
+    description: "List all dbt ETL pipeline models grouped by layer (source, staging, intermediate, mart)",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        layer: { type: "string", description: "Filter by layer: source, staging, intermediate, mart, or all" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "dbt_get_model",
+    description: "Get full details of a dbt model including all columns, descriptions and data types",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        model_name: { type: "string", description: "Name of the dbt model" },
+      },
+      required: ["model_name"],
+    },
+  },
+  {
+    name: "dbt_get_lineage",
+    description: "Get upstream and downstream lineage for a dbt model",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        model_name: { type: "string", description: "Name of the dbt model" },
+        depth: { type: "number", description: "Levels to traverse (default 1, max 5)" },
+      },
+      required: ["model_name"],
+    },
+  },
+  {
+    name: "dbt_search_column",
+    description: "Search for a column name across ALL dbt models and sources — use this when asked which tables or models have a specific column or field",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        column_name: { type: "string", description: "Column name to search for" },
+      },
+      required: ["column_name"],
+    },
+  },
+  {
+    name: "dbt_impact_analysis",
+    description: "Analyze the full downstream impact of changing or removing a dbt model",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        model_name: { type: "string", description: "The model you plan to change or remove" },
+      },
+      required: ["model_name"],
+    },
+  },
 ];
 
-const SYSTEM_PROMPT = `You are an expert data analyst assistant with direct access to a SQLite database via tools.
+const SYSTEM_PROMPT = `You are an expert data analyst and data engineer assistant with direct access to:
+1. A SQLite database (via execute_query, sample_table, column_stats, top_values etc.)
+2. A dbt data pipeline manifest (via dbt_list_models, dbt_get_model, dbt_get_lineage, dbt_search_column, dbt_impact_analysis)
 
-APPROACH:
-- When asked about data, ALWAYS use the available tools to get real data
+DATABASE APPROACH:
+- When asked about data, ALWAYS use tools to get real data
 - Start by sampling or querying the relevant table
 - Use column_stats and top_values to understand distributions
 - Use time_series for trend analysis
-- Use data_quality_check to audit data quality
+- Only write SELECT queries, never INSERT/UPDATE/DELETE
+
+DBT / ETL LINEAGE APPROACH:
+- When asked about data pipelines, models, transformations or lineage use the dbt_ tools
+- Use dbt_list_models to get an overview of the pipeline
+- Use dbt_get_lineage to trace how data flows from sources to marts
+- Use dbt_search_column to find where a specific column exists across models
+- Use dbt_impact_analysis to assess risk of changing a model
+- Explain lineage in plain English — sources, staging, intermediate, marts
+
+GENERAL:
 - Chain multiple tool calls to build a complete picture
-- After getting data, explain findings in plain business language
-- Always show the actual numbers from the data
-- Only write SELECT queries, never INSERT/UPDATE/DELETE`;
+- Always show actual data from tool results
+- Explain findings in plain business language`;
 
 export async function POST(req: NextRequest) {
   const { messages, model, schema } = await req.json();
