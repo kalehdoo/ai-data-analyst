@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Environment files - NEVER commit these
+.env
+.env.local
+
+# Next.js build output
+.next/
+out/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+
+# TypeScript
+*.tsbuildinfo

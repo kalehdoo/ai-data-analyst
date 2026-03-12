@@ -1,0 +1,18 @@
+{
+  "name": "pg-mcp-server",
+  "version": "1.0.0",
+  "description": "PostgreSQL MCP Server with schemas, queries, and analysis prompts",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@sqlitecloud/drivers": "^1.0.779",
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.0",
+    "zod": "^3.23.8"
+  }
+}
