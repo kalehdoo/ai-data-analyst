@@ -10,9 +10,10 @@ import Chat from "./Chat";
 import DataLineage from "./DataLineage";
 import ETLLineage from "./ETLLineage";
 import AuditLog from "./AuditLog";
-import Jobs from "./Jobs";
+import Jobs from "./jobs";
+import Dashboard from "./Dashboard";
 
-type Tab = "schemas" | "query" | "tools" | "prompts" | "chat" | "datamodel" | "etl" | "audit" | "jobs";
+type Tab = "schemas" | "query" | "tools" | "prompts" | "chat" | "datamodel" | "etl" | "audit" | "jobs" | "dashboard";
 
 export default function Workbench() {
   const { user, logout } = useAuth();
@@ -28,6 +29,7 @@ export default function Workbench() {
   }, []);
 
   const allTabs: { id: Tab; label: string; icon: string; roles: string[] }[] = [
+    { id: "dashboard", label: "Dashboard", icon: "📊", roles: ["Admin", "Analyst", "Viewer"] },
     { id: "schemas", label: "Schema Explorer", icon: "⬡", roles: ["Admin", "Analyst", "Viewer"] },
     { id: "datamodel", label: "Data Model", icon: "⟺", roles: ["Admin", "Analyst", "Viewer"] },
     { id: "query",   label: "SQL Query",       icon: "▶", roles: ["Admin", "Analyst", "Viewer"] },
@@ -37,6 +39,7 @@ export default function Workbench() {
     { id: "etl", label: "ETL Lineage", icon: "⬡", roles: ["Admin", "Analyst", "Viewer"] },
     { id: "audit", label: "Audit Log", icon: "📋", roles: ["Admin"] },
     { id: "jobs", label: "Jobs", icon: "⚙", roles: ["Admin", "Analyst"] },
+    
   ];
 
   const tabs = allTabs.filter((t) => t.roles.includes(user?.role || ""));
@@ -98,6 +101,7 @@ export default function Workbench() {
   </div>
 ) : (
   <>
+    {tab === "dashboard" && <Dashboard />}
     {tab === "schemas" && <SchemaExplorer />}
     {tab === "datamodel" && <DataLineage />}
     {tab === "etl" && <ETLLineage />}
