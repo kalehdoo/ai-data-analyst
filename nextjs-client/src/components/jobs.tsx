@@ -1,6 +1,6 @@
 "use client";
-import { useState, useRef } from "react";
 import { useAuth } from "@/lib/authContext";
+import { useState, useRef, useEffect } from "react";
 
 const JOBS = [
   {
@@ -9,23 +9,33 @@ const JOBS = [
     icon: "⟳",
     description: "Convert Informatica XML mappings to enterprise-grade dbt models",
     color: "#bc8cff",
+    mcpTool: "run_infa_to_dbt",
+    outputFileName: "dbt_migration.txt",
   },
-  // Future jobs can be added here
+  {
+    id: "infa_to_airflow",
+    label: "Infa to Airflow",
+    icon: "✈",
+    description: "Convert Informatica workflows to Apache Airflow DAGs",
+    color: "#58a6ff",
+    mcpTool: "run_infa_to_airflow",
+    outputFileName: "airflow_dag.py",
+  },
 ];
 
 const MODEL_OPTIONS = [
-  { id: "claude",  label: "Claude Opus",  color: "#e8b84b" },
-  { id: "gemini",  label: "Gemini 2.5",   color: "#58a6ff" },
-  { id: "openai",  label: "GPT-4o",       color: "#3fb950" },
+  { id: "claude", label: "Claude Opus", color: "#e8b84b" },
+  { id: "gemini", label: "Gemini 2.5",  color: "#58a6ff" },
+  { id: "openai", label: "GPT-4o",      color: "#3fb950" },
 ];
 
 const MAPPING_TYPES = [
-  { id: "truncate_load",   label: "Truncate & Load" },
-  { id: "full_refresh",    label: "Full Refresh" },
-  { id: "scd_type1_dim",   label: "SCD Type 1 Dimension" },
-  { id: "scd_type2_dim",   label: "SCD Type 2 Dimension" },
-  { id: "fact_table",      label: "Fact Table" },
-  { id: "auto",            label: "Auto Detect" },
+  { id: "truncate_load",  label: "Truncate & Load" },
+  { id: "full_refresh",   label: "Full Refresh" },
+  { id: "scd_type1_dim",  label: "SCD Type 1 Dimension" },
+  { id: "scd_type2_dim",  label: "SCD Type 2 Dimension" },
+  { id: "fact_table",     label: "Fact Table" },
+  { id: "auto",           label: "Auto Detect" },
 ];
 
 export default function Jobs() {
@@ -35,14 +45,25 @@ export default function Jobs() {
   const [xmlContent, setXmlContent] = useState("");
   const [jobName, setJobName] = useState("");
   const [mappingType, setMappingType] = useState("auto");
-  const [instructions, setInstructions] = useState("convert to dbt mapping");
+  const DEFAULT_INSTRUCTIONS: Record<string, string> = {
+  infa_to_dbt:      "convert to dbt mapping",
+  infa_to_airflow:  "convert informatica wf to airflow dag",
+};
+
+const [instructions, setInstructions] = useState(DEFAULT_INSTRUCTIONS[JOBS[0].id]);
   const [output, setOutput] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("claude");
   const fileRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
-  const [selectedModel, setSelectedModel] = useState("claude");
+
+  useEffect(() => {
+  setInstructions(DEFAULT_INSTRUCTIONS[selectedJob] || "");
+}, [selectedJob]);
+
+  const job = JOBS.find((j) => j.id === selectedJob)!;
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -50,7 +71,6 @@ export default function Jobs() {
     setXmlFile(file);
     const text = await file.text();
     setXmlContent(text);
-    // Auto-set job name from filename
     if (!jobName) setJobName(file.name.replace(".xml", "").replace(/_/g, " "));
   }
 
@@ -68,12 +88,13 @@ export default function Jobs() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-  xmlContent,
-  jobName,
-  mappingType: mappingType === "auto" ? "" : mappingType,
-  extraInstructions: instructions,
-  model: selectedModel,
-}),
+          xmlContent,
+          jobName,
+          mappingType: mappingType === "auto" ? "" : mappingType,
+          extraInstructions: instructions,
+          model: selectedModel,
+          mcpTool: job.mcpTool,
+        }),
       });
 
       if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -123,7 +144,7 @@ export default function Jobs() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${jobName.replace(/\s+/g, "_")}_dbt_migration.txt`;
+    a.download = `${jobName.replace(/\s+/g, "_")}_${job.outputFileName}`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -138,8 +159,6 @@ export default function Jobs() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  const job = JOBS.find((j) => j.id === selectedJob)!;
-
   return (
     <div style={s.root}>
       {/* Left sidebar */}
@@ -148,7 +167,7 @@ export default function Jobs() {
         {JOBS.map((j) => (
           <button
             key={j.id}
-            onClick={() => setSelectedJob(j.id)}
+            onClick={() => { setSelectedJob(j.id); clearAll(); }}
             style={{
               ...s.jobBtn,
               background: selectedJob === j.id ? `${j.color}18` : "transparent",
@@ -183,12 +202,11 @@ export default function Jobs() {
         </div>
 
         <div style={s.body}>
-          {/* Input section */}
           <div style={s.inputSection}>
 
             {/* File upload */}
             <div style={s.field}>
-              <label style={s.label}>Informatica XML Mapping File</label>
+              <label style={s.label}>Informatica XML File</label>
               <div
                 style={{
                   ...s.dropZone,
@@ -210,7 +228,7 @@ export default function Jobs() {
                   <div style={s.dropText}>
                     <span style={{ fontSize: 28, marginBottom: 8 }}>📁</span>
                     <span>Click to upload XML file</span>
-                    <span style={s.dropSub}>Informatica mapping XML</span>
+                    <span style={s.dropSub}>Informatica mapping or workflow XML</span>
                   </div>
                 )}
               </div>
@@ -219,39 +237,41 @@ export default function Jobs() {
 
             {/* Job name */}
             <div style={s.field}>
-              <label style={s.label}>dbt Job Name</label>
+              <label style={s.label}>{selectedJob === "infa_to_dbt" ? "dbt Job Name" : "Airflow DAG Name"}</label>
               <input
                 style={s.input}
-                placeholder="e.g. dim_customer_migration"
+                placeholder={selectedJob === "infa_to_dbt" ? "e.g. dim_customer_migration" : "e.g. customer_etl_dag"}
                 value={jobName}
                 onChange={(e) => setJobName(e.target.value)}
               />
             </div>
 
-            {/* Mapping type */}
-            <div style={s.field}>
-              <label style={s.label}>Mapping Type</label>
-              <div style={s.typeGrid}>
-                {MAPPING_TYPES.map((mt) => (
-                  <button
-                    key={mt.id}
-                    onClick={() => setMappingType(mt.id)}
-                    style={{
-                      ...s.typeBtn,
-                      background: mappingType === mt.id ? "rgba(188,140,255,0.15)" : "var(--bg-elevated)",
-                      borderTop: `1px solid ${mappingType === mt.id ? "#bc8cff" : "var(--border-bright)"}`,
-                      borderRight: `1px solid ${mappingType === mt.id ? "#bc8cff" : "var(--border-bright)"}`,
-                      borderBottom: `1px solid ${mappingType === mt.id ? "#bc8cff" : "var(--border-bright)"}`,
-                      borderLeft: `1px solid ${mappingType === mt.id ? "#bc8cff" : "var(--border-bright)"}`,
-                      color: mappingType === mt.id ? "#bc8cff" : "var(--text-secondary)",
-                      fontWeight: mappingType === mt.id ? 600 : 400,
-                    }}
-                  >
-                    {mt.label}
-                  </button>
-                ))}
+            {/* Mapping type — dbt only */}
+            {selectedJob === "infa_to_dbt" && (
+              <div style={s.field}>
+                <label style={s.label}>Mapping Type</label>
+                <div style={s.typeGrid}>
+                  {MAPPING_TYPES.map((mt) => (
+                    <button
+                      key={mt.id}
+                      onClick={() => setMappingType(mt.id)}
+                      style={{
+                        ...s.typeBtn,
+                        background: mappingType === mt.id ? "rgba(188,140,255,0.15)" : "var(--bg-elevated)",
+                        borderTop:    `1px solid ${mappingType === mt.id ? "#bc8cff" : "var(--border-bright)"}`,
+                        borderRight:  `1px solid ${mappingType === mt.id ? "#bc8cff" : "var(--border-bright)"}`,
+                        borderBottom: `1px solid ${mappingType === mt.id ? "#bc8cff" : "var(--border-bright)"}`,
+                        borderLeft:   `1px solid ${mappingType === mt.id ? "#bc8cff" : "var(--border-bright)"}`,
+                        color: mappingType === mt.id ? "#bc8cff" : "var(--text-secondary)",
+                        fontWeight: mappingType === mt.id ? 600 : 400,
+                      }}
+                    >
+                      {mt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Instructions */}
             <div style={s.field}>
@@ -265,29 +285,29 @@ export default function Jobs() {
             </div>
 
             {/* Model selector */}
-<div style={s.field}>
-  <label style={s.label}>AI Model</label>
-  <div style={{ display: "flex", gap: 8 }}>
-    {MODEL_OPTIONS.map((m) => (
-      <button
-        key={m.id}
-        onClick={() => setSelectedModel(m.id)}
-        style={{
-          ...s.typeBtn,
-          background: selectedModel === m.id ? `${m.color}22` : "var(--bg-elevated)",
-          borderTop: `1px solid ${selectedModel === m.id ? m.color : "var(--border-bright)"}`,
-          borderRight: `1px solid ${selectedModel === m.id ? m.color : "var(--border-bright)"}`,
-          borderBottom: `1px solid ${selectedModel === m.id ? m.color : "var(--border-bright)"}`,
-          borderLeft: `1px solid ${selectedModel === m.id ? m.color : "var(--border-bright)"}`,
-          color: selectedModel === m.id ? m.color : "var(--text-secondary)",
-          fontWeight: selectedModel === m.id ? 600 : 400,
-        }}
-      >
-        {m.label}
-      </button>
-    ))}
-  </div>
-</div>
+            <div style={s.field}>
+              <label style={s.label}>AI Model</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {MODEL_OPTIONS.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setSelectedModel(m.id)}
+                    style={{
+                      ...s.typeBtn,
+                      background: selectedModel === m.id ? `${m.color}22` : "var(--bg-elevated)",
+                      borderTop:    `1px solid ${selectedModel === m.id ? m.color : "var(--border-bright)"}`,
+                      borderRight:  `1px solid ${selectedModel === m.id ? m.color : "var(--border-bright)"}`,
+                      borderBottom: `1px solid ${selectedModel === m.id ? m.color : "var(--border-bright)"}`,
+                      borderLeft:   `1px solid ${selectedModel === m.id ? m.color : "var(--border-bright)"}`,
+                      color: selectedModel === m.id ? m.color : "var(--text-secondary)",
+                      fontWeight: selectedModel === m.id ? 600 : 400,
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {error && <div style={s.error}>{error}</div>}
 
@@ -296,15 +316,12 @@ export default function Jobs() {
               disabled={running || !xmlContent || !jobName}
               style={{
                 ...s.runBtn,
+                background: job.color,
                 opacity: running || !xmlContent || !jobName ? 0.5 : 1,
                 cursor: running || !xmlContent || !jobName ? "not-allowed" : "pointer",
               }}
             >
-              {running ? (
-                <span>⟳ Generating dbt models…</span>
-              ) : (
-                <span>▶ Run Migration</span>
-              )}
+              {running ? `⟳ Generating ${job.label}…` : `▶ Run ${job.label}`}
             </button>
           </div>
 
@@ -313,7 +330,7 @@ export default function Jobs() {
             <div style={s.outputSection}>
               <div style={s.outputHeader}>
                 <span style={s.outputTitle}>
-                  {done ? "✓ Migration Complete" : "⟳ Generating…"}
+                  {done ? `✓ ${job.label} Complete` : "⟳ Generating…"}
                 </span>
                 {done && (
                   <div style={{ display: "flex", gap: 8 }}>
@@ -362,9 +379,9 @@ const s: Record<string, React.CSSProperties> = {
   typeGrid:      { display: "flex", flexWrap: "wrap", gap: 8 },
   typeBtn:       { padding: "6px 14px", borderRadius: 99, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-mono)", transition: "all 0.15s" },
   textarea:      { background: "var(--bg-elevated)", borderTop: "1px solid var(--border-bright)", borderRight: "1px solid var(--border-bright)", borderBottom: "1px solid var(--border-bright)", borderLeft: "1px solid var(--border-bright)", color: "var(--text-primary)", padding: "8px 12px", borderRadius: "var(--radius)", fontSize: 13, outline: "none", resize: "vertical" as const, fontFamily: "var(--font-mono)" },
-  runBtn:        { background: "#bc8cff", color: "#000", border: "none", padding: "10px 24px", borderRadius: "var(--radius)", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-mono)", alignSelf: "flex-start", transition: "all 0.15s" },
+  runBtn:        { color: "#000", border: "none", padding: "10px 24px", borderRadius: "var(--radius)", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-mono)", alignSelf: "flex-start", transition: "all 0.15s" },
   error:         { padding: "10px 14px", background: "var(--red-dim)", color: "var(--red)", borderRadius: "var(--radius)", border: "1px solid var(--red)", fontSize: 12 },
-  outputSection: { display: "flex", flexDirection: "column", gap: 0, borderTop: "1px solid var(--border-bright)", borderRadius: "var(--radius)", overflow: "hidden", border: "1px solid var(--border-bright)" },
+  outputSection: { display: "flex", flexDirection: "column", borderRadius: "var(--radius)", overflow: "hidden", border: "1px solid var(--border-bright)" },
   outputHeader:  { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", background: "var(--bg-elevated)", borderBottom: "1px solid var(--border)" },
   outputTitle:   { fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", fontFamily: "var(--font-mono)" },
   output:        { maxHeight: 600, overflow: "auto", background: "var(--bg)", padding: "16px", position: "relative" as const },

@@ -23,7 +23,7 @@ function loadJobPrompt(name) {
 function loadSamples() {
   const samplesDir = join(jobsDir, "samples");
   if (!existsSync(samplesDir)) return {};
-  const files = readdirSync(samplesDir).filter((f) => f.endsWith(".sql") || f.endsWith(".yml") || f.endsWith(".yaml"));
+  const files = readdirSync(samplesDir).filter((f) => f.endsWith(".sql") || f.endsWith(".yml") || f.endsWith(".yaml") || f.endsWith(".py"));
   const samples = {};
   files.forEach((f) => {
   const name = f.replace(/\.(sql|yml|yaml)$/, "");
@@ -180,6 +180,37 @@ function setupServer(server) {
   // ════════════════════════════════════════════════════════════════════════════
 
   // ── Jobs Tools ──────────────────────────────────────────────────────────────
+
+  server.tool(
+  "run_infa_to_airflow",
+  "Convert an Informatica workflow XML to Apache Airflow DAGs using the conversion prompt and sample DAG templates",
+  {
+    xml_content:        { type: "string", description: "Full content of the Informatica workflow XML file" },
+    job_name:           { type: "string", description: "Name for the Airflow DAG" },
+    extra_instructions: { type: "string", description: "Any additional instructions from the user" },
+  },
+  async ({ xml_content, job_name, extra_instructions = "" }) => {
+    const prompt = loadJobPrompt("infa_to_airflow");
+    if (!prompt) throw new Error("infa_to_airflow.txt not found in mcp-server/jobs/prompts/");
+
+    const samples = loadSamples();
+    const dagSamples = Object.entries(samples)
+      .filter(([k]) => k.startsWith("airflow_"))
+      .map(([k, v]) => `=== ${k} ===\n${v}`)
+      .join("\n\n");
+
+    const fullPrompt = `${prompt}
+
+DAG NAME: ${job_name}
+${extra_instructions ? `ADDITIONAL INSTRUCTIONS: ${extra_instructions}` : ""}
+${dagSamples ? `\n\nREFERENCE DAG TEMPLATES:\n${dagSamples}` : ""}
+
+INFORMATICA WORKFLOW XML:
+${xml_content}`;
+
+    return { content: [{ type: "text", text: fullPrompt }] };
+  }
+);
 
 server.tool(
   "run_infa_to_dbt",

@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 
-async function getFullPrompt(xmlContent: string, jobName: string, mappingType: string, extraInstructions: string): Promise<string> {
+async function getFullPrompt(xmlContent: string, jobName: string, mappingType: string, extraInstructions: string, mcpTool: string = "run_infa_to_dbt"): Promise<string> {
   const mcpUrl = process.env.NEXT_PUBLIC_MCP_SERVER_URL || "http://localhost:3001/mcp";
 
   const initRes = await fetch(mcpUrl, {
@@ -26,7 +26,7 @@ async function getFullPrompt(xmlContent: string, jobName: string, mappingType: s
     body: JSON.stringify({
       jsonrpc: "2.0", id: 2, method: "tools/call",
       params: {
-        name: "run_infa_to_dbt",
+        name: mcpTool,
         arguments: { xml_content: xmlContent, job_name: jobName, mapping_type: mappingType, extra_instructions: extraInstructions },
       },
     }),
@@ -54,9 +54,9 @@ async function getFullPrompt(xmlContent: string, jobName: string, mappingType: s
 const SYSTEM = "You are an expert dbt and Informatica migration engineer. Generate complete, production-ready dbt project files. Be thorough and miss nothing from the XML. Output only code files with clear file path headers like '=== models/staging/stg_xxx.sql ===' before each file.";
 
 export async function POST(req: NextRequest) {
-  const { xmlContent, jobName, mappingType, extraInstructions, model = "claude" } = await req.json();
+  const { xmlContent, jobName, mappingType, extraInstructions, model = "claude", mcpTool = "run_infa_to_dbt" } = await req.json();
 
-  const fullPrompt = await getFullPrompt(xmlContent, jobName, mappingType || "", extraInstructions || "");
+const fullPrompt = await getFullPrompt(xmlContent, jobName, mappingType || "", extraInstructions || "", mcpTool);
   const encoder = new TextEncoder();
 
   // ── Claude ──────────────────────────────────────────────────────────────
