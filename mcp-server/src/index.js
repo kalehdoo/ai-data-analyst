@@ -5,7 +5,7 @@ import { Database } from "@sqlitecloud/drivers";
 import { z } from "zod";
 import dotenv from "dotenv";
 import http from "http";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, readdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { logAudit } from "./audit.js";
@@ -14,13 +14,31 @@ dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Load job prompts and samples
+const jobsDir = join(__dirname, "../jobs");
+function loadJobPrompt(name) {
+  const p = join(jobsDir, "prompts", `${name}.txt`);
+  return existsSync(p) ? readFileSync(p, "utf8") : null;
+}
+function loadSamples() {
+  const samplesDir = join(jobsDir, "samples");
+  if (!existsSync(samplesDir)) return {};
+  const files = readdirSync(samplesDir).filter((f) => f.endsWith(".sql") || f.endsWith(".yml") || f.endsWith(".yaml"));
+  const samples = {};
+  files.forEach((f) => {
+  const name = f.replace(/\.(sql|yml|yaml)$/, "");
+  samples[name] = readFileSync(join(samplesDir, f), "utf8");
+});
+  return samples;
+}
+
 // Load dbt manifest
 let dbtManifest = null;
 const manifestPath = join(__dirname, "../data/manifest.json");
 if (existsSync(manifestPath)) {
   try {
     dbtManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-    console.log("✓ dbt manifest loaded:", Object.keys(dbtManifest.nodes || {}).length, "models");
+    console.error("✓ dbt manifest loaded:", Object.keys(dbtManifest.nodes || {}).length, "models");
   } catch (e) {
     console.warn("⚠ Could not load manifest.json:", e.message);
   }
@@ -160,6 +178,46 @@ function setupServer(server) {
   // ════════════════════════════════════════════════════════════════════════════
   //  TOOLS
   // ════════════════════════════════════════════════════════════════════════════
+
+  // ── Jobs Tools ──────────────────────────────────────────────────────────────
+
+server.tool(
+  "run_infa_to_dbt",
+  "Convert an Informatica XML mapping to enterprise-grade dbt models using the full conversion prompt and sample patterns",
+  {
+    xml_content:   { type: "string", description: "Full content of the Informatica XML mapping file" },
+    job_name:      { type: "string", description: "Name for the dbt job/project" },
+    mapping_type:  { type: "string", description: "Type of mapping: truncate_load, full_refresh, scd_type1_dim, scd_type2_dim, fact_table" },
+    extra_instructions: { type: "string", description: "Any additional instructions from the user" },
+  },
+  async ({ xml_content, job_name, mapping_type, extra_instructions = "" }) => {
+    const prompt = loadJobPrompt("infa_to_dbt");
+    if (!prompt) throw new Error("infa_to_dbt.txt prompt file not found in mcp-server/jobs/prompts/");
+
+    const samples = loadSamples();
+    const sampleGuide = mapping_type && samples[mapping_type]
+      ? `\n\nREFERENCE SAMPLE FOR ${mapping_type.toUpperCase()}:\n${samples[mapping_type]}`
+      : `\n\nAVAILABLE SAMPLES FOR REFERENCE:\n${Object.entries(samples).map(([k, v]) => `=== ${k} ===\n${v}`).join("\n\n")}`;
+
+    const fullPrompt = `${prompt}
+
+JOB NAME: ${job_name}
+MAPPING TYPE: ${mapping_type || "auto-detect from XML"}
+${extra_instructions ? `ADDITIONAL INSTRUCTIONS: ${extra_instructions}` : ""}
+${sampleGuide}
+
+INFORMATICA XML MAPPING:
+${xml_content}`;
+
+    return {
+      content: [{
+        type: "text",
+        text: fullPrompt,
+      }],
+    };
+  }
+);
+
 // write log to sqlite database
   server.tool(
   "write_audit_log",
@@ -475,7 +533,9 @@ server.tool(
     
     async ({ sql, limit = 100, _username = "unknown", _role = "unknown" }) => {
     assertReadOnly(sql);
-    const start = Date.now();
+// Strip trailing semicolons — SQLite Cloud rejects them
+sql = sql.trim().replace(/;+$/, "");
+const start = Date.now();
     try {
       const isPragma = sql.trim().toUpperCase().startsWith("PRAGMA");
       const wrappedSql = isPragma || sql.toLowerCase().includes("limit")

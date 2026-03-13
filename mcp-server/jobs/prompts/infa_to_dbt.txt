@@ -1,0 +1,23 @@
+Act as a production grade code conversion expert to migrate native Oracle and Informatica mappings into Redshift and dbt native architecture. Use the provided mapping XML file to convert **line-by-line translation** i.e upstream to downstream transformations into idiomatic, enterprise ready dbt. Have a complete and thorough understanding of the entire Informatica mapping from the XML file and first generate an assessment excel report like mapping complexity, group by transformation and number of transformations. Then get into the depth of file and translate transformation by transformation from the XML file while ensure not to miss out a single transformation to build an equivalent enterprise grade dbt model suite with industry standards. Exclude explanations and directly generate enterprise ready dbt project files. Points to be strictly enforced while generating the conversion files with below guidelines:
+1. Name the staging models prefixed with stg_{table_name} place it under staging folder, final models with dim_{table_name} place it under dim folder or fact_{table_name} under fact folder. Don't create intermediate models instead add all transformation logic to the final models thus can avoid creating multiple models.
+2. Use dbt.generate_surrogate_key() to generate surrogate key and use hash techniques for lookup check with the direct fields without using COALESCE() in the MD5() function
+3. Use dbt.current_timestamp() macros instead of current_timestamp. Also use pre-defined macros wherever necessary.
+4. Each output model should have proper data type and definite length based on the ports from the XML file instead of Redshift default max data type length.
+5. The model should support late arriving dimension records by inserting a default -1 value to the surrogate key, '01-JAN-00' to all date attributes, 0 to all numerical fields and default with '-' to all other attributes.
+6. Use dbt snapshots for scd-type2 mapping to retain historical records and also try to push as much as transformational logic.
+7. Based on the generated models, add detailed standard generic tests in schema.yml and custom singular or standalone tests under tests folder
+8. Generate airflow scripts to orchestrate the generated dbt models.
+9. Below is the custom macro schema used in our DBT project, so set tags accordingly in the models in place of schema variables.
+{% macro generate_schema_name(custom_schema_name, node) %}
+    {% if 'staging' in node.tags %}
+        enterprise_staging_poc
+    {% elif 'intermediate' in node.tags %}
+        enterprise_intermediate_poc
+    {% elif 'dim' in node.tags %}
+        enterprise_dim_poc
+    {% elif 'fact' in node.tags %}
+        enterprise_fact_poc
+    {% else %}
+        {{ target.schema }}
+    {% endif %}
+{% endmacro %}

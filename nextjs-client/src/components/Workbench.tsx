@@ -10,8 +10,9 @@ import Chat from "./Chat";
 import DataLineage from "./DataLineage";
 import ETLLineage from "./ETLLineage";
 import AuditLog from "./AuditLog";
+import Jobs from "./Jobs";
 
-type Tab = "schemas" | "query" | "tools" | "prompts" | "chat" | "datamodel" | "etl" | "audit";
+type Tab = "schemas" | "query" | "tools" | "prompts" | "chat" | "datamodel" | "etl" | "audit" | "jobs";
 
 export default function Workbench() {
   const { user, logout } = useAuth();
@@ -35,6 +36,7 @@ export default function Workbench() {
     { id: "chat", label: "Data Chat", icon: "💬", roles: ["Admin", "Analyst"] },
     { id: "etl", label: "ETL Lineage", icon: "⬡", roles: ["Admin", "Analyst", "Viewer"] },
     { id: "audit", label: "Audit Log", icon: "📋", roles: ["Admin"] },
+    { id: "jobs", label: "Jobs", icon: "⚙", roles: ["Admin", "Analyst"] },
   ];
 
   const tabs = allTabs.filter((t) => t.roles.includes(user?.role || ""));
@@ -50,7 +52,7 @@ export default function Workbench() {
             <path d="M8 22 L16 10 L24 22" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             <circle cx="16" cy="10" r="2" fill="var(--accent)" />
           </svg>
-            <span style={s.brandText}>Data Analytics AI Workbench</span>
+            <span style={s.brandText}>MCP Datawarehouse Workbench</span>
           </div>
 
           <div style={s.statusRow}>
@@ -104,6 +106,7 @@ export default function Workbench() {
     {tab === "prompts" && <PromptRunner />}
     {tab === "chat"    && <Chat />}
     {tab === "audit" && <AuditLog />}
+    {tab === "jobs" && <Jobs />}
   </>
 )}
       </main>

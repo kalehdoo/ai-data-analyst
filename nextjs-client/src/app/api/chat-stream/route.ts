@@ -66,8 +66,20 @@ async function callMCPTool(name: string, args: Record<string, unknown>) {
   if (contentType.includes("text/event-stream")) {
     const text = await res.text();
     const lines = text.split("\n").filter((l) => l.startsWith("data: "));
-    const last = lines[lines.length - 1]?.replace("data: ", "").trim();
-    data = last ? JSON.parse(last) : { error: { message: "Empty stream" } };
+    let parsed = null;
+    // Find the line with actual result — skip [DONE] and empty lines
+    for (const line of lines) {
+      const jsonStr = line.replace("data: ", "").trim();
+      if (!jsonStr || jsonStr === "[DONE]") continue;
+      try {
+        const candidate = JSON.parse(jsonStr);
+        if (candidate?.result !== undefined || candidate?.error !== undefined) {
+          parsed = candidate;
+          break;
+        }
+      } catch (_) {}
+    }
+    data = parsed ?? { error: { message: "Empty or unparseable SSE stream" } };
   } else {
     data = await res.json();
   }
