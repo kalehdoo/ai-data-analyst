@@ -29,11 +29,11 @@ export default function LoginPage() {
             <path d="M8 22 L16 10 L24 22" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             <circle cx="16" cy="10" r="2" fill="var(--accent)" />
           </svg>
-          <span style={styles.logoText}>Retrieval Augmented Natural Agent Workbench</span>
+          <span style={styles.logoText}>Data Analytics AI Workbench</span>
         </div>
 
         <h1 style={styles.heading}>Sign in</h1>
-        <p style={styles.sub}>AI RAG MCP Workbench</p>
+        <p style={styles.sub}>RAG-MCP AI Workbench for Data Analytics</p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <label style={styles.label}>Username</label>

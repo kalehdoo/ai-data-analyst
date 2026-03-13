@@ -33,12 +33,25 @@ const [loading, setLoading] = useState(true);
       const u = { username: username.toLowerCase(), displayName: record.displayName, role: record.role };
       setUser(u);
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(u));
+      // Audit log
+      fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: u.username, role: u.role, action_type: "login", details: "User logged in" }),
+      }).catch(() => {});
       return true;
     }
     return false;
   }, []);
 
   const logout = useCallback(() => {
+    const currentUser = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "{}");
+    // Audit log
+    fetch("/api/audit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: currentUser.username || "unknown", role: currentUser.role || "unknown", action_type: "logout", details: "User logged out" }),
+    }).catch(() => {});
     resetMCPSession();
     sessionStorage.removeItem(SESSION_KEY);
     setUser(null);

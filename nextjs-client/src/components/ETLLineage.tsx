@@ -408,7 +408,7 @@ const [columnSearch, setColumnSearch] = useState("");
   />
 ) : (
   <input
-    style={{ ...s.search, borderColor: "#e8b84b", width: 200 }}
+    style={{ ...s.search, borderTop: "1px solid #e8b84b", borderRight: "1px solid #e8b84b", borderBottom: "1px solid #e8b84b", borderLeft: "1px solid #e8b84b", width: 200 }}
     placeholder="Search columns…"
     value={columnSearch}
     onChange={(e) => setColumnSearch(e.target.value)}
@@ -443,7 +443,7 @@ const [columnSearch, setColumnSearch] = useState("");
         {Object.entries(LAYER_CONFIG).map(([key, cfg]) => (
           <div
             key={key}
-            style={{ ...s.legendItem, borderColor: filterLayer === key ? cfg.color : "transparent", cursor: "pointer" }}
+            style={{ ...s.legendItem, borderTop: `1px solid ${filterLayer === key ? cfg.color : "transparent"}`, borderRight: `1px solid ${filterLayer === key ? cfg.color : "transparent"}`, borderBottom: `1px solid ${filterLayer === key ? cfg.color : "transparent"}`, borderLeft: `1px solid ${filterLayer === key ? cfg.color : "transparent"}`, cursor: "pointer" }}
             onClick={() => setFilterLayer(filterLayer === key ? "all" : key)}
           >
             <span style={{ ...s.legendDot, background: cfg.color }} />
@@ -594,7 +594,7 @@ const [columnSearch, setColumnSearch] = useState("");
                       <span style={{ ...nc.name, color: cfg.color }}>{node.name}</span>
                     </div>
                     <div style={nc.headerMeta}>
-                      <span style={{ ...nc.matBadge, color: mat.color, borderColor: `${mat.color}55` }}>
+                      <span style={{ ...nc.matBadge, color: mat.color, borderTop: `1px solid ${mat.color}55`, borderRight: `1px solid ${mat.color}55`, borderBottom: `1px solid ${mat.color}55`, borderLeft: `1px solid ${mat.color}55` }}>
                         {mat.label}
                       </span>
                       {node.loader && (
@@ -909,7 +909,7 @@ const s: Record<string, React.CSSProperties> = {
   title:      { fontSize: 16, fontWeight: 600, color: "var(--text-primary)", marginBottom: 2 },
   sub:        { fontSize: 12, color: "var(--text-secondary)" },
   controls:   { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const },
-  search:     { background: "var(--bg-elevated)", border: "1px solid var(--border-bright)", color: "var(--text-primary)", padding: "5px 10px", borderRadius: "var(--radius)", fontSize: 12, outline: "none", width: 160 },
+  search:     { background: "var(--bg-elevated)", borderTop: "1px solid var(--border-bright)", borderRight: "1px solid var(--border-bright)", borderBottom: "1px solid var(--border-bright)", borderLeft: "1px solid var(--border-bright)", color: "var(--text-primary)", padding: "5px 10px", borderRadius: "var(--radius)", fontSize: 12, outline: "none", width: 160 },
   select:     { background: "var(--bg-elevated)", border: "1px solid var(--border-bright)", color: "var(--text-secondary)", padding: "5px 8px", borderRadius: "var(--radius)", fontSize: 12, cursor: "pointer" },
   zoomRow:    { display: "flex", alignItems: "center", gap: 4 },
   zBtn:       { background: "var(--bg-elevated)", border: "1px solid var(--border-bright)", color: "var(--text-secondary)", width: 26, height: 26, borderRadius: "var(--radius)", cursor: "pointer", fontSize: 14 },
@@ -951,7 +951,7 @@ const nc: Record<string, React.CSSProperties> = {
   layerDot:   { width: 6, height: 6, borderRadius: "50%", flexShrink: 0 },
   name:       { fontSize: 12, fontWeight: 700, fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const, flex: 1 },
   headerMeta: { display: "flex", gap: 4, alignItems: "center" },
-  matBadge:   { fontSize: 9, fontWeight: 700, border: "1px solid", padding: "1px 5px", borderRadius: 99, fontFamily: "var(--font-mono)" },
+  matBadge: { fontSize: 9, fontWeight: 700, borderTop: "1px solid", borderRight: "1px solid", borderBottom: "1px solid", borderLeft: "1px solid", padding: "1px 5px", borderRadius: 99, fontFamily: "var(--font-mono)" },
   loaderBadge:{ fontSize: 9, color: "var(--text-muted)", background: "var(--bg)", border: "1px solid var(--border)", padding: "1px 5px", borderRadius: 99, fontFamily: "var(--font-mono)" },
   colCount:   { marginLeft: "auto", fontSize: 9, color: "var(--text-muted)" },
   colList:    { padding: "4px 0 6px" },

@@ -1,4 +1,5 @@
 "use client";
+
 import { useAuth } from "@/lib/authContext";
 import { useState } from "react";
 import * as mcp from "@/lib/mcpClient";
@@ -31,7 +32,7 @@ export default function QueryRunner() {
     if (!sql.trim()) return;
     setRunning(true); setError(""); setResult(null);
     try {
-      const res = await mcp.callTool("execute_query", { sql, limit });
+      const res = await mcp.callTool("execute_query", { sql, limit: 1000 }, { username: user?.username || "unknown", role: user?.role || "unknown" });
       let data: QueryResult;
 try {
   data = JSON.parse(res.content[0].text);

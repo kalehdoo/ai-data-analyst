@@ -164,3 +164,51 @@ Add to `claude_desktop_config.json`:
 - Credentials in `authContext.tsx` are hardcoded for demo — replace with a real auth system (NextAuth, Clerk, etc.) for production.
 - The MCP server validates CORS origin via `ALLOWED_ORIGIN` env var.
 - Consider adding PostgreSQL row-level security (RLS) for multi-tenant scenarios.
+
+## Local Setup (Mac)
+- Install VSCode
+- Install Git
+  brew install git
+  # Set up git identity
+  git config --global user.name "Your Name"
+  git config --global user.email "you@example.com"
+  # Authenticate via SSH
+  # Generate a key
+  ssh-keygen -t ed25519 -C "you@example.com"
+
+  # Copy the public key
+  cat ~/.ssh/id_ed25519.pub | pbcopy
+
+  # Then go to GitHub → Settings → SSH and GPG keys → New SSH key and paste it.
+
+  # test Connection
+  ssh -T git@github.com
+  # Should say: Hi username! You've successfully authenticated.
+
+- VS Code setup for Git
+  # Install the code command so you can open VS Code from the terminal:
+
+  # Open VS Code → press Cmd+Shift+P → type "Shell Command: Install 'code' command" → hit Enter
+
+  # Now you can open any project:
+  bashcd my-project
+  code .
+
+- Your first project workflow
+  # Clone an existing repo
+  git clone git@github.com:yourname/your-repo.git
+  cd your-repo
+  code .
+
+  # --- OR --- start a new project
+  mkdir my-project && cd my-project
+  git init
+  code .
+
+- Git commands
+  git status          # what's changed?
+  git pull            # get latest from GitHub
+  git checkout -b feature/my-feature   # create a new branch
+  git add .           # stage all changes
+  git commit -m "feat: add login page"
+  git push origin feature/my-feature  # push branch to GitHub

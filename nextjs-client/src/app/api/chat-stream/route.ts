@@ -14,6 +14,35 @@ const MCP_SERVER_URL = process.env.NEXT_PUBLIC_MCP_SERVER_URL || "http://localho
 let mcpSessionId: string | null = null;
 let mcpRequestId = 1;
 
+async function logToAudit(data: {
+  username: string;
+  role: string;
+  action_type: string;
+  details?: string;
+  model?: string;
+  context_mode?: string;
+  duration_ms?: number;
+  status?: string;
+  error_msg?: string;
+}) {
+  try {
+    const mcpUrl = process.env.NEXT_PUBLIC_MCP_SERVER_URL || "http://localhost:3001/mcp";
+    await fetch(mcpUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: Date.now(),
+        method: "tools/call",
+        params: {
+          name: "write_audit_log",
+          arguments: data,
+        },
+      }),
+    });
+  } catch (_) {}
+}
+
 async function callMCPTool(name: string, args: Record<string, unknown>) {
   const body = JSON.stringify({
     jsonrpc: "2.0",
@@ -571,7 +600,7 @@ RULES:
 }
 
 export async function POST(req: NextRequest) {
-  const { messages, model, schema, contextMode = "sqlite" } = await req.json();
+  const { messages, model, schema, contextMode = "sqlite", username = "unknown", role = "unknown" } = await req.json();
 
   const systemWithSchema = buildSystemPrompt(contextMode, schema);
   const encoder = new TextEncoder();
@@ -584,6 +613,8 @@ export async function POST(req: NextRequest) {
   // ── Gemini ─────────────────────────────────────────────────────────────────
   if (model === "gemini") {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+    const chatStart = Date.now();
+    const userMessage = messages[messages.length - 1]?.content?.slice(0, 500) || "";
     const geminiModel = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: systemWithSchema,
@@ -633,6 +664,15 @@ export async function POST(req: NextRequest) {
           const toolResults = [];
           for (const part of funcParts) {
             const fn = part.functionCall!;
+            await logToAudit({
+          username, role,
+          action_type: "ai_chat",
+          details: userMessage,
+          model: "gemini",
+          context_mode: contextMode,
+          duration_ms: Date.now() - chatStart,
+          status: "success",
+        });
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ toolCall: { name: fn.name, args: fn.args } })}\n\n`)
             );
@@ -682,6 +722,8 @@ export async function POST(req: NextRequest) {
   if (model === "openai") {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+    const chatStart = Date.now();
+    const userMessage = messages[messages.length - 1]?.content?.slice(0, 500) || "";
     const readable = makeStream(async (controller) => {
       try {
         await initMCP();
@@ -752,6 +794,15 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        await logToAudit({
+          username, role,
+          action_type: "ai_chat",
+          details: userMessage,
+          model: "gemini",
+          context_mode: contextMode,
+          duration_ms: Date.now() - chatStart,
+          status: "success",
+        });
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       } catch (e) {
@@ -771,6 +822,8 @@ export async function POST(req: NextRequest) {
   if (model === "claude") {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+    const chatStart = Date.now();
+    const userMessage = messages[messages.length - 1]?.content?.slice(0, 500) || "";
     const readable = makeStream(async (controller) => {
       try {
         await initMCP();
@@ -836,6 +889,15 @@ export async function POST(req: NextRequest) {
           claudeMessages.push({ role: "user", content: toolResults });
         }
 
+        await logToAudit({
+          username, role,
+          action_type: "ai_chat",
+          details: userMessage,
+          model: "gemini",
+          context_mode: contextMode,
+          duration_ms: Date.now() - chatStart,
+          status: "success",
+        });
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       } catch (e) {

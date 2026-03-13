@@ -8,6 +8,7 @@ import http from "http";
 import { readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { logAudit } from "./audit.js";
 
 dotenv.config();
 
@@ -159,6 +160,26 @@ function setupServer(server) {
   // ════════════════════════════════════════════════════════════════════════════
   //  TOOLS
   // ════════════════════════════════════════════════════════════════════════════
+// write log to sqlite database
+  server.tool(
+  "write_audit_log",
+  "Internal tool to write an audit log entry",
+  {
+    username:     { type: "string", description: "Username" },
+    role:         { type: "string", description: "User role" },
+    action_type:  { type: "string", description: "Action type: login, logout, query, ai_chat" },
+    details:      { type: "string", description: "Details", nullable: true },
+    model:        { type: "string", description: "AI model used", nullable: true },
+    context_mode: { type: "string", description: "Context mode", nullable: true },
+    duration_ms:  { type: "number", description: "Duration in ms", nullable: true },
+    status:       { type: "string", description: "Status", nullable: true },
+    error_msg:    { type: "string", description: "Error message", nullable: true },
+  },
+  async ({ username = "unknown", role = "unknown", action_type = "unknown", details, model, context_mode, duration_ms, status = "success", error_msg }) => {
+    await logAudit({ username, role, action_type, details, model, context_mode, duration_ms, status, error_msg });
+    return { content: [{ type: "text", text: "logged" }] };
+  }
+);
 
   // ── dbt Manifest Tools ──────────────────────────────────────────────────────
 
@@ -448,29 +469,58 @@ server.tool(
     {
       sql: z.string().describe("The SELECT SQL query to execute"),
       limit: z.number().optional().default(500).describe("Maximum rows to return"),
+      _username: z.string().optional().default("unknown").describe("Internal: username for audit logging"),
+      _role: z.string().optional().default("unknown").describe("Internal: role for audit logging"),
     },
-    async ({ sql, limit = 500 }) => {
-      assertReadOnly(sql);
-      const safeLimit = Math.min(limit, 5000);
-      const isPragma = /^\s*PRAGMA/i.test(sql);
-const hasLimit = /\bLIMIT\b/i.test(sql);
-const finalSql = isPragma || hasLimit ? sql : `SELECT * FROM (${sql}) LIMIT ${safeLimit}`;
-      const start = Date.now();
-      const rows = await runReadOnly(finalSql);
-      const elapsed = Date.now() - start;
+    
+    async ({ sql, limit = 100, _username = "unknown", _role = "unknown" }) => {
+    assertReadOnly(sql);
+    const start = Date.now();
+    try {
+      const isPragma = sql.trim().toUpperCase().startsWith("PRAGMA");
+      const wrappedSql = isPragma || sql.toLowerCase().includes("limit")
+        ? sql
+        : `SELECT * FROM (${sql}) LIMIT ${limit}`;
+
+      const db = new Database(process.env.SQLITE_CLOUD_URL);
+      const rows = await db.sql(wrappedSql);
+      const duration_ms = Date.now() - start;
+
+      const columns = rows.length > 0
+        ? Object.keys(rows[0]).map((name) => ({ name }))
+        : [];
+
+      await logAudit({
+        username: _username,
+        role: _role,
+        action_type: "query",
+        details: sql,
+        duration_ms,
+        row_count: rows.length,
+        status: "success",
+      });
+
       return {
         content: [{
           type: "text",
-          text: JSON.stringify({
-            rowCount: rows.length,
-            executionMs: elapsed,
-            columns: rows.length > 0 ? Object.keys(rows[0]).map((name) => ({ name })) : [],
-            rows,
-          }, null, 2),
+          text: JSON.stringify({ rows, columns, rowCount: rows.length, executionMs: duration_ms }),
         }],
       };
+    } catch (e) {
+      await logAudit({
+        username: _username,
+        role: _role,
+        action_type: "query",
+        details: sql,
+        duration_ms: Date.now() - start,
+        status: "error",
+        error_msg: e.message,
+      });
+      throw e;
     }
-  );
+  }
+
+);
 
   // Sample random rows from a table
   server.tool(

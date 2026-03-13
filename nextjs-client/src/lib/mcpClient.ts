@@ -57,8 +57,15 @@ export async function readResource(uri: string) {
 export async function listTools() {
   return sendMCP<{ tools: Array<{ name: string; description: string }> }>({ method: "tools/list" });
 }
-export async function callTool(name: string, args: Record<string, unknown>) {
-  return sendMCP<{ content: Array<{ type: string; text: string }> }>({ method: "tools/call", params: { name, arguments: args } });
+export async function callTool(name: string, args: Record<string, unknown>, userInfo?: { username: string; role: string }) {
+  // Inject user info for audit logging
+  if (userInfo) {
+    args = { ...args, _username: userInfo.username, _role: userInfo.role };
+  }
+  return sendMCP<{ content: Array<{ type: string; text: string }> }>({
+    method: "tools/call",
+    params: { name, arguments: args },
+  });
 }
 export async function listPrompts() {
   return sendMCP<{ prompts: Array<{ name: string; description: string }> }>({ method: "prompts/list" });
