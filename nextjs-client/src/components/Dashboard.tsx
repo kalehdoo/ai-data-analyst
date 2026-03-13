@@ -89,6 +89,15 @@ export default function Dashboard() {
   const [saveShare, setSaveShare] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState("");
 
+  const [showEditModal, setShowEditModal] = useState(false);
+const [editQuery, setEditQuery] = useState<SavedQuery | null>(null);
+const [editName, setEditName] = useState("");
+const [editDesc, setEditDesc] = useState("");
+const [editTags, setEditTags] = useState("");
+const [editPin, setEditPin] = useState(false);
+const [editShare, setEditShare] = useState(false);
+const [editSaving, setEditSaving] = useState(false);
+
   // Search
   const [search, setSearch] = useState("");
 
@@ -154,15 +163,17 @@ export default function Dashboard() {
       setResult(data);
       // Update run count if this is a saved query
       if (activeQueryId) {
-        await mcp.callTool("execute_query", {
+        await mcp.callTool("write_query", {
           sql: `UPDATE saved_queries SET run_count = run_count + 1, last_run_at = CURRENT_TIMESTAMP WHERE id = ${activeQueryId}`,
         });
         await loadSavedQueries();
       }
     } catch (e: unknown) {
-      setRunError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setRunError(`Save failed: ${msg}`);
+      console.error("Save error:", e);
     } finally {
-      setRunning(false);
+      setSaving(false);
     }
   }
 
@@ -170,7 +181,7 @@ export default function Dashboard() {
     if (!editorSql.trim() || !editorName.trim()) return;
     setSaving(true);
     try {
-      await mcp.callTool("execute_query", {
+      await mcp.callTool("write_query", {
         sql: `INSERT INTO saved_queries (name, description, sql, created_by, is_pinned, is_shared, tags)
               VALUES ('${editorName.replace(/'/g, "''")}', '${editorDesc.replace(/'/g, "''")}',
               '${editorSql.replace(/'/g, "''")}', '${user?.username}',
@@ -188,21 +199,21 @@ export default function Dashboard() {
   }
 
   async function togglePin(q: SavedQuery) {
-    await mcp.callTool("execute_query", {
+    await mcp.callTool("write_query", {
       sql: `UPDATE saved_queries SET is_pinned = ${q.is_pinned ? 0 : 1} WHERE id = ${q.id}`,
     });
     await loadSavedQueries();
   }
 
   async function toggleShare(q: SavedQuery) {
-    await mcp.callTool("execute_query", {
+    await mcp.callTool("write_query", {
       sql: `UPDATE saved_queries SET is_shared = ${q.is_shared ? 0 : 1} WHERE id = ${q.id}`,
     });
     await loadSavedQueries();
   }
 
   async function deleteQuery(id: number) {
-    await mcp.callTool("execute_query", {
+    await mcp.callTool("write_query", {
       sql: `DELETE FROM saved_queries WHERE id = ${id}`,
     });
     await loadSavedQueries();
@@ -212,6 +223,41 @@ export default function Dashboard() {
       setEditorName("");
     }
   }
+
+  function openEdit(q: SavedQuery) {
+  setEditQuery(q);
+  setEditName(q.name);
+  setEditDesc(q.description || "");
+  setEditTags(q.tags || "");
+  setEditPin(q.is_pinned === 1);
+  setEditShare(q.is_shared === 1);
+  setShowEditModal(true);
+}
+
+async function saveEdit() {
+  if (!editQuery || !editName.trim()) return;
+  setEditSaving(true);
+  try {
+    await mcp.callTool("write_query", {
+      sql: `UPDATE saved_queries SET
+        name = '${editName.replace(/'/g, "''")}',
+        description = '${editDesc.replace(/'/g, "''")}',
+        tags = '${editTags.replace(/'/g, "''")}',
+        is_pinned = ${editPin ? 1 : 0},
+        is_shared = ${editShare ? 1 : 0},
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${editQuery.id}`,
+    });
+    await loadSavedQueries();
+    setShowEditModal(false);
+    setSaveSuccess("Query updated!");
+    setTimeout(() => setSaveSuccess(""), 3000);
+  } catch (e: unknown) {
+    setRunError(e instanceof Error ? e.message : String(e));
+  } finally {
+    setEditSaving(false);
+  }
+}
 
   function loadIntoEditor(sql: string, name = "", id: number | null = null) {
     setEditorSql(sql);
@@ -318,6 +364,7 @@ export default function Dashboard() {
                     onPin={() => togglePin(q)}
                     onShare={() => toggleShare(q)}
                     onDelete={() => deleteQuery(q.id)}
+                    onEdit={() => openEdit(q)}
                     canEdit={isAdmin || q.created_by === user?.username}
                   />
                 ))}
@@ -366,6 +413,7 @@ export default function Dashboard() {
                     onPin={() => togglePin(q)}
                     onShare={() => toggleShare(q)}
                     onDelete={() => deleteQuery(q.id)}
+                    onEdit={() => openEdit(q)}
                     canEdit={isAdmin || q.created_by === user?.username}
                   />
                 ))}
@@ -422,23 +470,27 @@ export default function Dashboard() {
               )}
             </div>
             <div style={s.editorActions}>
-              {saveSuccess && <span style={s.saveSuccess}>{saveSuccess}</span>}
-              {editorSql && (
-                <>
-                  <button onClick={() => setShowSaveModal(true)} style={s.saveBtn}>💾 Save</button>
-                  <button
-                    onClick={runQuery}
-                    disabled={running}
-                    style={{ ...s.runBtn, opacity: running ? 0.6 : 1 }}
-                  >
-                    {running ? "⟳ Running…" : "▶ Run (⌘+Enter)"}
-                  </button>
-                </>
-              )}
-              {editorSql && (
-                <button onClick={() => { setEditorSql(""); setEditorName(""); setActiveQueryId(null); setResult(null); }} style={s.clearBtn}>✕</button>
-              )}
-            </div>
+  {saveSuccess && <span style={s.saveSuccess}>{saveSuccess}</span>}
+  <button
+    onClick={() => { setEditorSql(""); setEditorName(""); setEditorDesc(""); setEditorTags(""); setActiveQueryId(null); setResult(null); setRunError(""); textareaRef.current?.focus(); }}
+    style={s.newBtn}
+  >
+    + New Query
+  </button>
+  {editorSql && (
+    <>
+      <button onClick={() => setShowSaveModal(true)} style={s.saveBtn}>💾 Save</button>
+      <button
+        onClick={runQuery}
+        disabled={running}
+        style={{ ...s.runBtn, opacity: running ? 0.6 : 1 }}
+      >
+        {running ? "⟳ Running…" : "▶ Run (⌘+Enter)"}
+      </button>
+      <button onClick={() => { setEditorSql(""); setEditorName(""); setActiveQueryId(null); setResult(null); }} style={s.clearBtn}>✕</button>
+    </>
+  )}
+</div>
           </div>
 
           <textarea
@@ -543,18 +595,82 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Edit modal */}
+{showEditModal && editQuery && (
+  <div style={s.modalOverlay} onClick={() => setShowEditModal(false)}>
+    <div style={s.modal} onClick={(e) => e.stopPropagation()}>
+      <div style={s.modalTitle}>✏️ Edit Query</div>
+
+      <div style={s.modalField}>
+        <label style={s.modalLabel}>Name *</label>
+        <input style={s.modalInput} value={editName} onChange={(e) => setEditName(e.target.value)} />
+      </div>
+
+      <div style={s.modalField}>
+        <label style={s.modalLabel}>Description</label>
+        <input style={s.modalInput} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
+      </div>
+
+      <div style={s.modalField}>
+        <label style={s.modalLabel}>Tags</label>
+        <input
+          style={s.modalInput}
+          placeholder="e.g. daily, threshold:row_count>0"
+          value={editTags}
+          onChange={(e) => setEditTags(e.target.value)}
+        />
+        <span style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+          Use threshold:row_count&gt;0 to trigger alerts
+        </span>
+      </div>
+
+      <div style={s.modalToggles}>
+        <label style={s.toggleLabel}>
+          <input type="checkbox" checked={editPin} onChange={(e) => setEditPin(e.target.checked)} />
+          <span>📌 Pinned</span>
+        </label>
+        <label style={s.toggleLabel}>
+          <input type="checkbox" checked={editShare} onChange={(e) => setEditShare(e.target.checked)} />
+          <span>📚 Shared</span>
+        </label>
+      </div>
+
+      <div style={s.modalField}>
+        <label style={s.modalLabel}>SQL</label>
+        <textarea
+          style={{ ...s.modalInput, fontFamily: "var(--font-mono)", fontSize: 12, minHeight: 80, resize: "vertical" as const }}
+          value={editQuery.sql}
+          readOnly
+        />
+      </div>
+
+      <div style={s.modalActions}>
+        <button onClick={() => setShowEditModal(false)} style={s.cancelBtn}>Cancel</button>
+        <button
+          onClick={saveEdit}
+          disabled={editSaving || !editName.trim()}
+          style={{ ...s.confirmBtn, opacity: editSaving || !editName.trim() ? 0.5 : 1 }}
+        >
+          {editSaving ? "Saving…" : "Update Query"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
 
 // Query card sub-component
-function QueryCard({ q, active, onLoad, onPin, onShare, onDelete, canEdit }: {
+function QueryCard({ q, active, onLoad, onPin, onShare, onDelete, onEdit, canEdit }: {
   q: SavedQuery;
   active: boolean;
   onLoad: () => void;
   onPin: () => void;
   onShare: () => void;
   onDelete: () => void;
+  onEdit: () => void;
   canEdit: boolean;
 }) {
   const tags = q.tags ? q.tags.split(",").filter(Boolean) : [];
@@ -584,16 +700,17 @@ function QueryCard({ q, active, onLoad, onPin, onShare, onDelete, canEdit }: {
           {q.last_run_at ? ` · ${new Date(q.last_run_at).toLocaleDateString()}` : ""}
         </span>
         {canEdit && (
-          <div style={qc.actions}>
-            <button onClick={onPin} style={qc.iconBtn} title={q.is_pinned ? "Unpin" : "Pin"}>
-              {q.is_pinned ? "📌" : "📍"}
-            </button>
-            <button onClick={onShare} style={qc.iconBtn} title={q.is_shared ? "Unshare" : "Share with team"}>
-              {q.is_shared ? "📚" : "🔒"}
-            </button>
-            <button onClick={onDelete} style={{ ...qc.iconBtn, color: "var(--red)" }} title="Delete">✕</button>
-          </div>
-        )}
+  <div style={qc.actions}>
+    <button onClick={(e) => { e.stopPropagation(); onEdit(); }} style={qc.iconBtn} title="Edit">✏️</button>
+    <button onClick={(e) => { e.stopPropagation(); onPin(); }} style={qc.iconBtn} title={q.is_pinned ? "Unpin" : "Pin"}>
+      {q.is_pinned ? "📌" : "📍"}
+    </button>
+    <button onClick={(e) => { e.stopPropagation(); onShare(); }} style={qc.iconBtn} title={q.is_shared ? "Unshare" : "Share with team"}>
+      {q.is_shared ? "📚" : "🔒"}
+    </button>
+    <button onClick={(e) => { e.stopPropagation(); onDelete(); }} style={{ ...qc.iconBtn, color: "var(--red)" }} title="Delete">✕</button>
+  </div>
+)}
       </div>
     </div>
   );
@@ -661,6 +778,7 @@ const s: Record<string, React.CSSProperties> = {
   modalActions:   { display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 4 },
   cancelBtn:      { background: "none", borderTop: "1px solid var(--border-bright)", borderRight: "1px solid var(--border-bright)", borderBottom: "1px solid var(--border-bright)", borderLeft: "1px solid var(--border-bright)", color: "var(--text-secondary)", padding: "7px 16px", borderRadius: "var(--radius)", fontSize: 13, cursor: "pointer" },
   confirmBtn:     { background: "var(--accent)", border: "none", color: "#000", padding: "7px 16px", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 700, cursor: "pointer" },
+  newBtn: { background: "none", borderTop: "1px solid var(--accent)", borderRight: "1px solid var(--accent)", borderBottom: "1px solid var(--accent)", borderLeft: "1px solid var(--accent)", color: "var(--accent)", padding: "5px 12px", borderRadius: "var(--radius)", fontSize: 12, cursor: "pointer", fontFamily: "var(--font-mono)" },
 };
 
 const qc: Record<string, React.CSSProperties> = {

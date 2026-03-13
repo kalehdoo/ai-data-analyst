@@ -179,6 +179,26 @@ function setupServer(server) {
   //  TOOLS
   // ════════════════════════════════════════════════════════════════════════════
 
+  //--Dashboard tools to save query
+
+  server.tool(
+  "write_query",
+  "Execute an INSERT, UPDATE or DELETE query for app data (saved_queries table only)",
+  {
+    sql: z.string().describe("The INSERT/UPDATE/DELETE SQL to execute"),
+  },
+  async ({ sql }) => {
+    // Only allow writes to app tables, not data tables
+    const allowed = ["saved_queries", "audit_logs", "query_templates"];
+    const isAllowed = allowed.some((t) => sql.toLowerCase().includes(t));
+    if (!isAllowed) throw new Error("write_query only allowed on app tables: saved_queries, audit_logs, query_templates");
+
+    const db = new Database(process.env.SQLITE_CLOUD_URL);
+    await db.sql(sql);
+    return { content: [{ type: "text", text: JSON.stringify({ success: true }) }] };
+  }
+);
+
   // ── Jobs Tools ──────────────────────────────────────────────────────────────
 
   server.tool(
