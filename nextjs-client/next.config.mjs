@@ -1,3 +1,5 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = { reactStrictMode: true };
+const nextConfig = {
+  allowedDevOrigins: ["*.loclx.io"],
+};
 export default nextConfig;
