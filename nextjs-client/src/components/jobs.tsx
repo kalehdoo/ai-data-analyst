@@ -95,6 +95,8 @@ const [instructions, setInstructions] = useState(DEFAULT_INSTRUCTIONS[JOBS[0].id
           extraInstructions: instructions,
           model: selectedModel,
           mcpTool: job.mcpTool,
+          userApiKeys: loadApiKeys(),
+  role: user?.role || "unknown",
         }),
       });
 

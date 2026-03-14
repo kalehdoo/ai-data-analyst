@@ -4,6 +4,8 @@ import { useAuth } from "@/lib/authContext";
 import * as mcp from "@/lib/mcpClient";
 import { loadApiKeys, getMissingKeyMessage, UserApiKeys } from "./Settings";
 
+
+
 type Model = "gemini" | "openai" | "claude";
 
 interface QueryResult {
@@ -25,6 +27,14 @@ const STORAGE_KEY = "rana_chat_history";
 const MODEL_KEY = "rana_chat_model";
 
 export default function Chat() {
+    const [userApiKeys, setUserApiKeys] = useState<Record<string, string>>({});
+
+useEffect(() => {
+  try {
+    const raw = localStorage.getItem("rana_user_api_keys");
+    if (raw) setUserApiKeys(JSON.parse(atob(raw)));
+  } catch (_) {}
+}, []);
   const { user } = useAuth();
   const isAdmin = user?.role === "Admin";
 
@@ -248,11 +258,11 @@ while (true) {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") sendMessage();
   }
 
-  const modelOptions: { id: Model; label: string; color: string; available: boolean }[] = [
-    { id: "gemini", label: "Gemini", color: "#4285f4", available: true },
-    { id: "openai", label: "GPT-4o mini", color: "#10a37f", available: true },
-    { id: "claude", label: "Claude", color: "var(--accent)", available: isAdmin },
-  ];
+  const modelOptions = [
+  { id: "gemini", label: "Gemini", icon: "✨", color: "#4285f4", available: true },
+  { id: "openai", label: "GPT-4o mini", icon: "🧠", color: "#10a37f", available: true },
+  { id: "claude", label: "Claude", icon: "🪶", color: "var(--accent)", available: isAdmin },
+];
 
   return (
     <div style={s.root}>
@@ -269,25 +279,31 @@ while (true) {
   
           {/* Model selector */}
           <div style={s.modelSelector}>
-            {modelOptions.filter((m) => m.available).map((opt) => (
-              <button
-                key={opt.id}
-                onClick={() => setModel(opt.id)}
-                style={{
-  ...s.modelBtn,
-  ...(model === opt.id ? {
-    background: opt.color,
-    color: "#fff",
-    borderTop: `1px solid ${opt.color}`,
-    borderRight: `1px solid ${opt.color}`,
-    borderBottom: `1px solid ${opt.color}`,
-    borderLeft: `1px solid ${opt.color}`,
-  } : {}),
-}}
-              >
-                {opt.label}
-              </button>
-            ))}
+                      {modelOptions.filter((m) => m.available).map((opt) => (
+                          <button
+                              key={opt.id}
+                              onClick={() => setModel(opt.id)}
+                              style={{
+                                  ...s.modelBtn,
+                                  ...(model === opt.id ? {
+                                      background: opt.color,
+                                      color: "#fff",
+                                      borderTop: `1px solid ${opt.color}`,
+                                      borderRight: `1px solid ${opt.color}`,
+                                      borderBottom: `1px solid ${opt.color}`,
+                                      borderLeft: `1px solid ${opt.color}`,
+                                  } : {}),
+                              }}
+                          >
+                              {(() => {
+  const hasKey =
+    (opt.id === "claude" && (userApiKeys.anthropic || user?.role === "Admin")) ||
+    (opt.id === "gemini" && (userApiKeys.gemini    || user?.role === "Admin")) ||
+    (opt.id === "openai" && (userApiKeys.openai    || user?.role === "Admin"));
+  return <>{opt.icon} {opt.label} <span style={{ fontSize: 10 }}>{hasKey ? "✓" : "✗"}</span></>;
+})()}
+                          </button>
+                      ))}
           </div>
           <button onClick={clearChat} style={s.clearBtn}>Clear chat</button>
         </div>

@@ -54,14 +54,16 @@ async function getFullPrompt(xmlContent: string, jobName: string, mappingType: s
 const SYSTEM = "You are an expert dbt and Informatica migration engineer. Generate complete, production-ready dbt project files. Be thorough and miss nothing from the XML. Output only code files with clear file path headers like '=== models/staging/stg_xxx.sql ===' before each file.";
 
 export async function POST(req: NextRequest) {
-  const { xmlContent, jobName, mappingType, extraInstructions, model = "claude", mcpTool = "run_infa_to_dbt" } = await req.json();
+  const { xmlContent, jobName, mappingType, extraInstructions, model = "claude", mcpTool = "run_infa_to_dbt", userApiKeys = {}, role = "unknown" } = await req.json();
 
 const fullPrompt = await getFullPrompt(xmlContent, jobName, mappingType || "", extraInstructions || "", mcpTool);
   const encoder = new TextEncoder();
 
   // ── Claude ──────────────────────────────────────────────────────────────
   if (model === "claude") {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const anthropicKey = userApiKeys?.anthropic || (role === "Admin" ? process.env.ANTHROPIC_API_KEY : "") || "";
+if (!anthropicKey) throw new Error("No Anthropic API key — add your key in Settings → API Keys");
+const client = new Anthropic({ apiKey: anthropicKey });
     const stream = new ReadableStream({
       async start(controller) {
         try {
@@ -90,7 +92,9 @@ const fullPrompt = await getFullPrompt(xmlContent, jobName, mappingType || "", e
 
   // ── Gemini ───────────────────────────────────────────────────────────────
   if (model === "gemini") {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+    const geminiKey = userApiKeys?.gemini || (role === "Admin" ? process.env.GEMINI_API_KEY : "") || "";
+if (!geminiKey) throw new Error("No Gemini API key — add your key in Settings → API Keys");
+const genAI = new GoogleGenerativeAI(geminiKey);
     const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: SYSTEM });
     const stream = new ReadableStream({
       async start(controller) {
@@ -113,7 +117,9 @@ const fullPrompt = await getFullPrompt(xmlContent, jobName, mappingType || "", e
 
   // ── OpenAI ───────────────────────────────────────────────────────────────
   if (model === "openai") {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openaiKey = userApiKeys?.openai || (role === "Admin" ? process.env.OPENAI_API_KEY : "") || "";
+if (!openaiKey) throw new Error("No OpenAI API key — add your key in Settings → API Keys");
+const openai = new OpenAI({ apiKey: openaiKey });
     const stream = new ReadableStream({
       async start(controller) {
         try {

@@ -1,4 +1,5 @@
 "use client";
+import { useAuth } from "@/lib/authContext";
 import { useState, useEffect } from "react";
 
 // ── API Key utilities (exported for use in other components) ──────────────────
@@ -105,6 +106,9 @@ export default function Settings() {
 // ── API Keys Section ──────────────────────────────────────────────────────────
 
 function ApiKeysSection() {
+    const { user } = useAuth();
+    const isAdmin = user?.role === "Admin";
+    function useIsAdmin() { return isAdmin; }
   const [keys, setKeys]     = useState<UserApiKeys>({});
   const [show, setShow]     = useState({ anthropic: false, gemini: false, openai: false });
   const [saved, setSaved]   = useState(false);
@@ -172,18 +176,18 @@ function ApiKeysSection() {
       <div style={p.body}>
         {/* Info banner */}
         <div style={p.infoBanner}>
-          <span style={{ fontSize: 16 }}>💡</span>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 2 }}>
-              How it works
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-              If you provide your own key it will be used for all AI calls in Chat, Jobs, and Prompts tabs.
-              If no key is provided the app will fall back to the server key.
-              If a model is selected without a key you will see a clear error message.
-            </div>
-          </div>
-        </div>
+  <span style={{ fontSize: 16 }}>💡</span>
+  <div>
+    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", marginBottom: 2 }}>
+      How it works
+    </div>
+    <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+      {useIsAdmin()
+        ? "As Admin you can use the server keys or override with your own. Your own key takes priority if provided."
+        : "You need to provide your own API keys to use AI features. Keys are stored locally in your browser only."}
+    </div>
+  </div>
+</div>
 
         {/* Key fields */}
         {fields.map((f) => {
