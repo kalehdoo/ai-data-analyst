@@ -776,8 +776,8 @@ export async function POST(req: NextRequest) {
           if (choice.finish_reason === "stop") break;
 
           // Execute tool calls
-          for (const toolCall of assistantMsg.tool_calls) {
-            const args = JSON.parse((toolCall as any).function.arguments);
+          for (const toolCall of assistantMsg.tool_calls as any[]) {
+            const args = JSON.parse(toolCall.function.arguments);
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ toolCall: { name: toolCall.function.name, args } })}\n\n`)
             );
