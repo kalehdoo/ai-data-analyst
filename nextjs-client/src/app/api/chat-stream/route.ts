@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType, Tool as GeminiTool } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest } from "next/server";
@@ -110,7 +110,7 @@ async function initMCP() {
 }
 
 // Tool definitions for Gemini
-const geminiTools: GeminiTool[] = [{
+const geminiTools: { functionDeclarations: { name: string; description: string; parameters: unknown }[] }[] = [{
   functionDeclarations: [
     {
       name: "execute_query",
@@ -630,7 +630,7 @@ export async function POST(req: NextRequest) {
     const geminiModel = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: systemWithSchema,
-      tools: [{ functionDeclarations: geminiTools[0].functionDeclarations.filter((t) => {
+      tools: [{ functionDeclarations: (geminiTools[0] as any).functionDeclarations.filter((t: any) => {
   const isDbtTool = t.name.startsWith("dbt_");
   if (contextMode === "sqlite") return !isDbtTool;
   if (contextMode === "dbt") return isDbtTool;
