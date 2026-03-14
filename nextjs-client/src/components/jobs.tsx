@@ -1,6 +1,7 @@
 "use client";
 import { useAuth } from "@/lib/authContext";
 import { useState, useRef, useEffect } from "react";
+import { loadApiKeys } from "./Settings";
 
 const JOBS = [
   {

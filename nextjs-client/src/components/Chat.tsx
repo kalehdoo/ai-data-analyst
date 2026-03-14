@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/authContext";
 import * as mcp from "@/lib/mcpClient";
+import { loadApiKeys, getMissingKeyMessage, UserApiKeys } from "./Settings";
 
 type Model = "gemini" | "openai" | "claude";
 

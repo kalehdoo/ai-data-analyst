@@ -12,8 +12,9 @@ import ETLLineage from "./ETLLineage";
 import AuditLog from "./AuditLog";
 import Jobs from "./jobs";
 import Dashboard from "./Dashboard";
+import Settings, { loadApiKeys, getMissingKeyMessage, UserApiKeys } from "./Settings";
 
-type Tab = "schemas" | "query" | "tools" | "prompts" | "chat" | "datamodel" | "etl" | "audit" | "jobs" | "dashboard";
+type Tab = "schemas" | "query" | "tools" | "prompts" | "chat" | "datamodel" | "etl" | "audit" | "jobs" | "dashboard" | "settings";
 
 export default function Workbench() {
   const { user, logout } = useAuth();
@@ -39,6 +40,7 @@ export default function Workbench() {
     { id: "etl", label: "ETL Lineage", icon: "⬡", roles: ["Admin", "Analyst", "Viewer"] },
     { id: "audit", label: "Audit Log", icon: "📋", roles: ["Admin"] },
     { id: "jobs", label: "Jobs", icon: "⚙", roles: ["Admin", "Analyst"] },
+    { id: "settings", label: "Settings", icon: "⚙", roles: ["Admin", "Analyst", "Viewer"] },
     
   ];
 
@@ -111,6 +113,7 @@ export default function Workbench() {
     {tab === "chat"    && <Chat />}
     {tab === "audit" && <AuditLog />}
     {tab === "jobs" && <Jobs />}
+    {tab === "settings" && <Settings />}
   </>
 )}
       </main>
