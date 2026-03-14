@@ -777,7 +777,7 @@ export async function POST(req: NextRequest) {
 
           // Execute tool calls
           for (const toolCall of assistantMsg.tool_calls) {
-            const args = JSON.parse(toolCall.function.arguments);
+            const args = JSON.parse((toolCall as any).function.arguments);
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ toolCall: { name: toolCall.function.name, args } })}\n\n`)
             );
