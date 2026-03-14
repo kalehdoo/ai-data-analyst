@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, Tool as GeminiTool } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest } from "next/server";
@@ -116,10 +116,10 @@ const geminiTools: GeminiTool[] = [{
       name: "execute_query",
       description: "Run a read-only SELECT query against the SQLite database",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          sql: { type: "string" as const, description: "The SELECT SQL query to execute" },
-          limit: { type: "number" as const, description: "Maximum rows to return (default 100)" },
+          sql: { type: SchemaType.STRING, description: "The SELECT SQL query to execute" },
+          limit: { type: SchemaType.NUMBER, description: "Maximum rows to return (default 100)" },
         },
         required: ["sql"],
       },
@@ -128,10 +128,10 @@ const geminiTools: GeminiTool[] = [{
       name: "sample_table",
       description: "Get a random sample of rows from a table",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          table: { type: "string" as const, description: "Table name" },
-          limit: { type: "number" as const, description: "Number of rows (default 25)" },
+          table: { type: SchemaType.STRING, description: "Table name" },
+          limit: { type: SchemaType.NUMBER, description: "Number of rows (default 25)" },
         },
         required: ["table"],
       },
@@ -140,10 +140,10 @@ const geminiTools: GeminiTool[] = [{
       name: "column_stats",
       description: "Get statistics for a column: min, max, avg, nulls, distinct count",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          table: { type: "string" as const, description: "Table name" },
-          column: { type: "string" as const, description: "Column name" },
+          table: { type: SchemaType.STRING, description: "Table name" },
+          column: { type: SchemaType.STRING, description: "Column name" },
         },
         required: ["table", "column"],
       },
@@ -152,11 +152,11 @@ const geminiTools: GeminiTool[] = [{
       name: "top_values",
       description: "Get most frequent values in a column",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          table: { type: "string" as const, description: "Table name" },
-          column: { type: "string" as const, description: "Column name" },
-          limit: { type: "number" as const, description: "Number of top values" },
+          table: { type: SchemaType.STRING, description: "Table name" },
+          column: { type: SchemaType.STRING, description: "Column name" },
+          limit: { type: SchemaType.NUMBER, description: "Number of top values" },
         },
         required: ["table", "column"],
       },
@@ -165,9 +165,9 @@ const geminiTools: GeminiTool[] = [{
       name: "data_quality_check",
       description: "Run a data quality audit on a table",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          table: { type: "string" as const, description: "Table name" },
+          table: { type: SchemaType.STRING, description: "Table name" },
         },
         required: ["table"],
       },
@@ -176,13 +176,13 @@ const geminiTools: GeminiTool[] = [{
       name: "time_series",
       description: "Aggregate a metric over time",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          table: { type: "string" as const, description: "Table name" },
-          dateColumn: { type: "string" as const, description: "Date column" },
-          valueColumn: { type: "string" as const, description: "Numeric column to aggregate" },
-          aggregation: { type: "string" as const, description: "sum, avg, count, min, or max" },
-          period: { type: "string" as const, description: "hour, day, week, month, or year" },
+          table: { type: SchemaType.STRING, description: "Table name" },
+          dateColumn: { type: SchemaType.STRING, description: "Date column" },
+          valueColumn: { type: SchemaType.STRING, description: "Numeric column to aggregate" },
+          aggregation: { type: SchemaType.STRING, description: "sum, avg, count, min, or max" },
+          period: { type: SchemaType.STRING, description: "hour, day, week, month, or year" },
         },
         required: ["table", "dateColumn", "valueColumn"],
       },
@@ -191,9 +191,9 @@ const geminiTools: GeminiTool[] = [{
       name: "dbt_list_models",
       description: "List all dbt ETL pipeline models grouped by layer (source, staging, intermediate, mart)",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          layer: { type: "string" as const, description: "Filter by layer: source, staging, intermediate, mart, or all" },
+          layer: { type: SchemaType.STRING, description: "Filter by layer: source, staging, intermediate, mart, or all" },
         },
         required: [],
       },
@@ -202,9 +202,9 @@ const geminiTools: GeminiTool[] = [{
       name: "dbt_get_model",
       description: "Get full details of a dbt model including all columns, descriptions and data types",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          model_name: { type: "string" as const, description: "Name of the dbt model e.g. stg_orders, fct_orders" },
+          model_name: { type: SchemaType.STRING, description: "Name of the dbt model e.g. stg_orders, fct_orders" },
         },
         required: ["model_name"],
       },
@@ -213,10 +213,10 @@ const geminiTools: GeminiTool[] = [{
       name: "dbt_get_lineage",
       description: "Get upstream and downstream lineage for a dbt model — shows where data comes from and where it goes",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          model_name: { type: "string" as const, description: "Name of the dbt model" },
-          depth: { type: "number" as const, description: "How many levels to traverse (default 1, max 5)" },
+          model_name: { type: SchemaType.STRING, description: "Name of the dbt model" },
+          depth: { type: SchemaType.NUMBER, description: "How many levels to traverse (default 1, max 5)" },
         },
         required: ["model_name"],
       },
@@ -225,9 +225,9 @@ const geminiTools: GeminiTool[] = [{
       name: "dbt_search_column",
       description: "Search for a column name across ALL dbt models and sources — use this when asked which tables or models have a specific column or field",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          column_name: { type: "string" as const, description: "Column name to search for (partial match supported)" },
+          column_name: { type: SchemaType.STRING, description: "Column name to search for (partial match supported)" },
         },
         required: ["column_name"],
       },
@@ -236,9 +236,9 @@ const geminiTools: GeminiTool[] = [{
       name: "dbt_impact_analysis",
       description: "Analyze the full downstream impact of changing or removing a dbt model",
       parameters: {
-        type: "object" as const,
+        type: SchemaType.OBJECT,
         properties: {
-          model_name: { type: "string" as const, description: "The model you plan to change or remove" },
+          model_name: { type: SchemaType.STRING, description: "The model you plan to change or remove" },
         },
         required: ["model_name"],
       },
@@ -420,7 +420,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "execute_query",
     description: "Run a read-only SELECT query against the SQLite database",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         sql: { type: "string", description: "The SELECT SQL query" },
         limit: { type: "number", description: "Max rows to return" },
@@ -432,7 +432,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "sample_table",
     description: "Get a random sample of rows from a table",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         table: { type: "string", description: "Table name" },
         limit: { type: "number", description: "Number of rows" },
@@ -444,7 +444,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "column_stats",
     description: "Get statistics for a column",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         table: { type: "string", description: "Table name" },
         column: { type: "string", description: "Column name" },
@@ -456,7 +456,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "top_values",
     description: "Get most frequent values in a column",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         table: { type: "string", description: "Table name" },
         column: { type: "string", description: "Column name" },
@@ -469,7 +469,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "data_quality_check",
     description: "Run a data quality audit on a table",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         table: { type: "string", description: "Table name" },
       },
@@ -480,7 +480,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "time_series",
     description: "Aggregate a metric over time",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         table: { type: "string", description: "Table name" },
         dateColumn: { type: "string", description: "Date column" },
@@ -495,7 +495,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "dbt_list_models",
     description: "List all dbt ETL pipeline models grouped by layer (source, staging, intermediate, mart)",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         layer: { type: "string", description: "Filter by layer: source, staging, intermediate, mart, or all" },
       },
@@ -506,7 +506,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "dbt_get_model",
     description: "Get full details of a dbt model including all columns, descriptions and data types",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         model_name: { type: "string", description: "Name of the dbt model" },
       },
@@ -517,7 +517,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "dbt_get_lineage",
     description: "Get upstream and downstream lineage for a dbt model",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         model_name: { type: "string", description: "Name of the dbt model" },
         depth: { type: "number", description: "Levels to traverse (default 1, max 5)" },
@@ -529,7 +529,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "dbt_search_column",
     description: "Search for a column name across ALL dbt models and sources — use this when asked which tables or models have a specific column or field",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         column_name: { type: "string", description: "Column name to search for" },
       },
@@ -540,7 +540,7 @@ const claudeTools: Anthropic.Tool[] = [
     name: "dbt_impact_analysis",
     description: "Analyze the full downstream impact of changing or removing a dbt model",
     input_schema: {
-      type: "object" as const,
+      type: SchemaType.OBJECT,
       properties: {
         model_name: { type: "string", description: "The model you plan to change or remove" },
       },
