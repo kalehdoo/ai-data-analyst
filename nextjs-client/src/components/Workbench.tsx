@@ -10,7 +10,7 @@ import Chat from "./Chat";
 import DataLineage from "./DataLineage";
 import ETLLineage from "./ETLLineage";
 import AuditLog from "./AuditLog";
-import Jobs from "./jobs";
+import Jobs from "./Jobs";
 import Dashboard from "./Dashboard";
 import Settings, { loadApiKeys, getMissingKeyMessage, UserApiKeys } from "./Settings";
 

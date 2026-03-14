@@ -258,7 +258,13 @@ while (true) {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") sendMessage();
   }
 
-  const modelOptions = [
+  const modelOptions: {
+  id: Model;
+  label: string;
+  icon: string;
+  color: string;
+  available: boolean;
+}[] = [
   { id: "gemini", label: "Gemini", icon: "✨", color: "#4285f4", available: true },
   { id: "openai", label: "GPT-4o mini", icon: "🧠", color: "#10a37f", available: true },
   { id: "claude", label: "Claude", icon: "🪶", color: "var(--accent)", available: isAdmin },
