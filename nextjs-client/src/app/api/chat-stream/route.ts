@@ -751,7 +751,7 @@ export async function POST(req: NextRequest) {
             model: "gpt-4o-mini",
             max_tokens: 8000,
             messages: openaiMessages,
-            tools: openaiTools.filter((t) => {
+            tools: openaiTools.filter((t: any) => {
   const isDbtTool = t.function.name.startsWith("dbt_");
   if (contextMode === "sqlite") return !isDbtTool;
   if (contextMode === "dbt") return isDbtTool;
